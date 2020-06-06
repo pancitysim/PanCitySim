@@ -1,5 +1,5 @@
 # PanCitySim
-This repository contains a demo version of the codes used for the paper "Activity-based mechanistic model for high-resolution epidemic tracking and control in urban areas"
+This repository contains a demo version of the codes used for the paper "........"
 
 
 ## Using colab(Recommended)
