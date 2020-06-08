@@ -4,7 +4,7 @@ This repository contains a demo version of the codes used for the paper ".......
 
 ## Using colab(Recommended)
 If the user wishes to use `google colab`, we have created a copy of the demo notebook in colab format. We recommend this method for quick testing of the script as the requirements are built-in and directory structure is already taken care of. The steps required to run the demo script using colab version are as following:
-* open `demo_script_using_google_colab_light_version.ipynb` in browser; click on `open in colab`
+* open `demo_script_using_google_colab_version.ipynb` in browser; click on `open in colab`
 * upload the `demo_dataset_30K_individuals.zip` file into the colab runtime environment
 * run each cell of the notebook starting from top; output files and plots will be generated in the `ouput_files` folder. The output plots can also be previewed in the notebook
 
