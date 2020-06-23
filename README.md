@@ -1,5 +1,5 @@
 # PanCitySim
-This repository contains a demo version of the codes used for the paper "........"
+This repository contains a demo version of the codes used for the paper "[Activity-based contact network scaling and epidemic propagation in metropolitan areas](https://arxiv.org/abs/2006.06039)"
 
 
 ## Using colab(Recommended)
@@ -38,3 +38,15 @@ The entire dataset is too large to be incorporated here. We are trying to upload
 The complete set of ouput files from simmobility for `Auto Sprawl` are hosted [here](https://drive.google.com/drive/folders/18r-r6fHvIMer9ErxusYPhIaHACoIrQek?usp=sharing). The files for `Auto Innovative` are hosted [here](https://drive.google.com/drive/folders/1tp0KvAo6dVNG4u34KDlyxTTYgDhS-Ss-?usp=sharing)
 
 Processing of huge graphs is a memory-hungry operation. If the amount of RAM available is not sufficient, the Graphs can be loaded from the disk during the course of simulation. This can be tweaked by setting the `load_graphs_in_RAM` to `False`. The parallel loading of Graphs was tested but is not incorporated in the current version of the notebook. These are present in the `parallel-loading-of-Graphs` branch. A flowchart showing the parallelisation of loading of contact graphs is shown [here](https://user-images.githubusercontent.com/9101260/83565330-cfc54480-a550-11ea-87ac-7c00cdf17622.png)
+
+## Citation
+If you find this repository useful for your research, please cite the following paper:
+```
+@article{kumar2020activity,
+  title={Activity-based contact network scaling and epidemic propagation in metropolitan areas},
+  author={Kumar, Nishant and Oke, Jimi B and Nahmias-Biran, Bat-hen},
+  journal={arXiv preprint arXiv:2006.06039},
+  year={2020}
+}
+```
+
