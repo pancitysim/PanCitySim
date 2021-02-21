@@ -294,7 +294,7 @@ import matplotlib.pyplot as plt
 import pickle
 import numpy as np
 import gc
-import networkx as nx
+
 
 
 # Filename: Activity_schedule
@@ -369,13 +369,13 @@ import matplotlib.pyplot as plt
 import pickle
 import numpy as np
 import gc
-import networkx as nx
+
 
 
 
 
 globalTime = time.time()
-regenerate_graphs = True
+
 
 
 if regenerate_graphs:
@@ -786,8 +786,9 @@ def process_one_t(t):
 
 
 pool = Pool(1)                         # Create a multiprocessing Pool
-pool.map(process_one_t, range(0,288)) 
-print ("UNION of graph completed")
+if regenerate_graphs:
+    pool.map(process_one_t, range(0,288)) 
+    print ("UNION of graph completed")
 
 
 
@@ -824,8 +825,7 @@ d = {}
 
 ###### process and count new infections
 est_r_0 = []
-# ! pip install sortednp
-import sortednp as snp
+
 import numpy as np
 import multiprocessing
 
@@ -1072,8 +1072,8 @@ for initial_infections in [1000]*3:
 
 ###### process and count new infections
 est_r_0 = []
-# ! pip install sortednp
-import sortednp as snp
+
+
 import numpy as np
 import multiprocessing
 import matplotlib.pyplot as plt
@@ -1518,7 +1518,7 @@ print (len(backup_states_loaded))
 # In[ ]:
 
 
-os.system(' pip install altair')
+
 age_labels = {'0':'0-9', '1':'10-19','2':'20-29 ','3':'30-39','4':'40-49','5':'50-59','6':'60-69','7':'>70'}
 age_map = {0:0, 1:0, 2:1, 3:1, 4:2, 5:2, 6:3, 7:3, 8:4, 9:4, 10:5, 11:5, 12:6, 13:6, 14:7, 15:7, 16:7, 17:7}
 
@@ -1526,7 +1526,7 @@ import matplotlib as mpl
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-mpl.style.use('seaborn')
+
 
 
 age_count_percentage = {}
@@ -2067,7 +2067,7 @@ import matplotlib as mpl
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-mpl.style.use('seaborn')
+
 
 
 age_count_percentage = {}
@@ -2245,7 +2245,7 @@ import matplotlib as mpl
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-mpl.style.use('seaborn')
+
 
 
 age_count_percentage = {}
@@ -2340,7 +2340,7 @@ import matplotlib as mpl
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-mpl.style.use('seaborn')
+
 
 
 age_count_percentage = {}
@@ -2693,31 +2693,7 @@ os.system(' tar -czvf images.tar.gz *.png')
 # In[ ]:
 
 
-import matplotlib.pyplot as plt
-import networkx as nx
-G = nx.DiGraph()  # 5x5 grid
-G = G.to_undirected()
-G = nx.complete_graph(4)
-
-# G.add_edge(1,'ST_node')
-# G.add_edge(2,'ST_node')
-# G.add_edge(3,'ST_node')
-# G.add_edge(4,'ST_node')
-# G.add_edge(5,'ST_node')
-
-# print the adjacency list
-# for line in nx.generate_adjlist(G):
-#     print(line)
-# write edgelist to grid.edgelist
-nx.write_edgelist(G, path="grid.edgelist", delimiter=":")
-# read edgelist from grid.edgelist
-H = nx.read_edgelist(path="grid.edgelist", delimiter=":")
-
-nx.draw(H, node_color=['blue']*4, node_size=[100]*4, cmap=plt.cm.Blues)
-plt.show()
-
-from network2tikz import plot
-plot((H.nodes,H.edges),'network.tex')
+# In[ ]:
 
 
 
@@ -2725,13 +2701,7 @@ plot((H.nodes,H.edges),'network.tex')
 # In[ ]:
 
 
-os.system('pip install network2tikz')
 
-
-# In[ ]:
-
-
-import networkx
 import matplotlib.pyplot as plt
 def plot_graph_properties(G_loaded, filename , dpi_=300):
     # get average degree of graph
@@ -2741,14 +2711,21 @@ def plot_graph_properties(G_loaded, filename , dpi_=300):
         neighbour_count = 0
         node_count = 0 
         n = 0
-        for dummy in G_loaded[i]["backward"]:
+
+        if load_graphs_in_RAM == False:
+            with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
+                G = pickle.load(handle)
+        else:
+            G = G_loaded[i]
+
+        for dummy in G["backward"]:
             if 'ACT' in filename:
                 if not (dummy < 20000000 or dummy >= 50000000): 
                     continue
             if 'PT' in filename:
                 if not (dummy >= 30000000 and dummy < 50000000):
                     continue 
-            n = len(G_loaded[i]["backward"][dummy])
+            n = len(G["backward"][dummy])
             neighbour_count += (n - 1) * n/2
             node_count += n
         if node_count != 0:
@@ -2779,8 +2756,15 @@ def plot_graph_properties(G_loaded, filename , dpi_=300):
         print (i)
         neighbour_count = 0
         node_count = 0 
-        for dummy in G_loaded[i]["backward"]:
-            n = len(G_loaded[i]["backward"][dummy])
+
+        if load_graphs_in_RAM == False:
+            with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
+                G = pickle.load(handle)
+        else:
+            G = G_loaded[i]
+
+        for dummy in G["backward"]:
+            n = len(G["backward"][dummy])
             if 'ACT' in filename:
                 if not (dummy < 20000000 or dummy >= 50000000): 
                     continue
@@ -2856,8 +2840,15 @@ def plot_graph_properties(G_loaded, filename , dpi_=300):
         neighbour_count = 0
         node_count = 0
         percentage_of_node_types = {}
-        for dummy in G_loaded[i]["backward"]:
-            n = len(G_loaded[i]["backward"][dummy])
+
+        if load_graphs_in_RAM == False:
+            with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
+                G = pickle.load(handle)
+        else:
+            G = G_loaded[i]
+
+        for dummy in G["backward"]:
+            n = len(G["backward"][dummy])
             if 'ACT' in filename:    
                 if not (dummy < 20000000 or dummy >= 50000000): 
                     continue
@@ -2955,7 +2946,7 @@ def plot_graph_properties(G_loaded, filename , dpi_=300):
 
 
 
-import networkx
+
 import matplotlib.pyplot as plt
 def plot_graph_properties(G_loaded, filename ,which_graphs, dpi_=300):
     # get average degree of graph
@@ -2965,7 +2956,14 @@ def plot_graph_properties(G_loaded, filename ,which_graphs, dpi_=300):
         neighbour_count = 0
         node_count = 0 
         n = 0
-        for dummy in G_loaded[i]["backward"]:
+
+        if load_graphs_in_RAM == False:
+            with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
+                G = pickle.load(handle)
+        else:
+            G = G_loaded[i]
+
+        for dummy in G["backward"]:
             if 'ACT' == which_graphs:
                 if not (dummy < 20000000 or dummy >= 50000000): 
                     continue
@@ -2984,7 +2982,7 @@ def plot_graph_properties(G_loaded, filename ,which_graphs, dpi_=300):
             if 'OTHER' == which_graphs:
                 if not (dummy >= 90000000 and dummy < 100000000):
                     continue                     
-            n = len(G_loaded[i]["backward"][dummy])
+            n = len(G["backward"][dummy])
             neighbour_count += (n - 1) * n/2
             node_count += n
         if node_count != 0:
@@ -3005,7 +3003,7 @@ def plot_graph_properties(G_loaded, filename ,which_graphs, dpi_=300):
 #         csvwriter.writerow(["Y_axis_stuff"]+y_axis_stuff)
 #     plt.savefig('Average degree_'+filename+'_.png', dpi=dpi_)
 #     plt.show()
-    with open('output_images/non_weighted_degree_'+which_graphs+'.pickle', 'wb') as handle:
+    with open('non_weighted_degree_'+which_graphs+'.pickle', 'wb') as handle:
         pickle.dump([x_axis_stuff, y_axis_stuff], handle, protocol=pickle.HIGHEST_PROTOCOL)   
     
     
@@ -3015,8 +3013,15 @@ def plot_graph_properties(G_loaded, filename ,which_graphs, dpi_=300):
     for i in range(288):
         neighbour_count = 0
         node_count = 0 
-        for dummy in G_loaded[i]["backward"]:
-            n = len(G_loaded[i]["backward"][dummy])
+
+        if load_graphs_in_RAM == False:
+            with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
+                G = pickle.load(handle)
+        else:
+            G = G_loaded[i]
+
+        for dummy in G["backward"]:
+            n = len(G["backward"][dummy])
             if 'ACT' == which_graphs:
                 if not (dummy < 20000000 or dummy >= 50000000): 
                     continue
@@ -3091,7 +3096,7 @@ def plot_graph_properties(G_loaded, filename ,which_graphs, dpi_=300):
 # In[161]:
 
 
-import networkx
+
 import matplotlib.pyplot as plt
 def plot_graph_properties_distribution(G_loaded, filename ,which_graphs, dpi_=300):
     # get average degree of graph
@@ -3106,8 +3111,15 @@ def plot_graph_properties_distribution(G_loaded, filename ,which_graphs, dpi_=30
     for i in range(288):
         neighbour_count = 0
         node_count = 0 
-        for dummy in G_loaded[i]["backward"]:
-            n = len(G_loaded[i]["backward"][dummy])
+
+        if load_graphs_in_RAM == False:
+            with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
+                G = pickle.load(handle)
+        else:
+            G = G_loaded[i]
+
+        for dummy in G["backward"]:
+            n = len(G["backward"][dummy])
 
             if 'PT' == which_graphs:
                 if not (dummy >= 30000000 and dummy < 50000000):
@@ -3166,7 +3178,6 @@ def plot_graph_properties_distribution(G_loaded, filename ,which_graphs, dpi_=30
 # In[181]:
 
 
-import networkx
 import matplotlib.pyplot as plt
 def plot_graph_properties_distribution_non_weighted(G_loaded, filename ,which_graphs, dpi_=300):
     # get average degree of graph
@@ -3180,8 +3191,15 @@ def plot_graph_properties_distribution_non_weighted(G_loaded, filename ,which_gr
     for i in range(288):
         neighbour_count = 0
         node_count = 0 
-        for dummy in G_loaded[i]["backward"]:
-            n = len(G_loaded[i]["backward"][dummy])
+
+        if load_graphs_in_RAM == False:
+            with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
+                G = pickle.load(handle)
+        else:
+            G = G_loaded[i]
+
+        for dummy in G["backward"]:
+            n = len(G["backward"][dummy])
 
             if 'PT' == which_graphs:
                 if not (dummy >= 30000000 and dummy < 50000000):
@@ -3285,7 +3303,7 @@ timeofdayticks = ['0:00 AM', '     ', '     ', '     ', '     ', '     ', '     
 
 # plot curves foor graph
 
-# mpl.style.use('seaborn')
+
 import matplotlib as mpl
 mpl.rc_file_defaults()
 
@@ -3342,7 +3360,7 @@ plt.show()
 
 # plot curves foor graph
 
-# mpl.style.use('seaborn')
+
 import matplotlib as mpl
 # font = {'weight' : 'bold',
 #         'size'   : 13}
@@ -3396,7 +3414,7 @@ plt.show()
 # In[ ]:
 
 
-# mpl.style.use('seaborn')
+
 import matplotlib as mpl
 import pickle
 import numpy as np
@@ -3539,7 +3557,7 @@ plt.show()
 
 # plot curves foor graph
 
-# mpl.style.use('seaborn')
+
 # mpl.rc_file_defaults()
 
 colormap = {'H':'#1b9e77','W':'#d95f02','E':'#7570b3','S':'#e7298a','O':'#66a61e','B':'#e6ab02','M':'#a6761d','Bus+MRT':'#666666'}
@@ -3997,140 +4015,4 @@ plt.show()
 
 
 # In[ ]:
-
-
-# get mode shares from DAS
-modes_share = {}
-das = []
-with open('AI_demand_BC') as f:
-    next(f)
-    for row in f:
-        listed = row.strip().split(',')
-        stop_mode = listed[7]
-        if stop_mode in modes_share:
-            modes_share[stop_mode] += 1
-        else:
-            modes_share[stop_mode] = 1
-        das.append(listed)
-            
-s = sum(modes_share.values())
-for mode in modes_share:
-
-    print (mode, round(modes_share[mode]/s*100,2), modes_share[mode],'%')
-
-
-# In[ ]:
-
-
-
-# trip start time
-trip_start_time = []
-for i in range(len(das)):
-    if das[i][4] !='Home':
-        continue
-    trip_start_time.append(float(das[i][13]))
-startTimeDict = {}
-for t in trip_start_time:
-    if t not in startTimeDict:
-        startTimeDict[t] = 1
-    else:
-        startTimeDict[t] += 1
-plt.hist(trip_start_time,20)
-for key in startTimeDict:
-    print (key,':[',round(startTimeDict[key]/sum(startTimeDict.values())*100,2),',', startTimeDict[key],'],',end='')
-counts_, bins_ = np.histogram(trip_start_time, 10)
-plt.plot(bins_[:-1], (counts_), color='orange', label='AS')    
-
-
-# In[ ]:
-
-
-
-node_lat_lon = {}
-node_dict = {}
-with open('AI_node_lat_lon.csv') as f:
-   for row in f:
-       listed = row.strip().split(',')
-       node_lat_lon[int(listed[0])] = [float(listed[1]), float(listed[2])]
-
-node_wise_dict_of_act = {}
-for i in range(len(das)):
-   if int(das[i][5]) in node_wise_dict_of_act:
-       node_wise_dict_of_act[int(das[i][5])].append(das[i][4])
-   else:
-       node_wise_dict_of_act[int(das[i][5])]= [das[i][4]]
-
-import collections    
-for key in node_wise_dict_of_act:
-   counter=collections.Counter(node_wise_dict_of_act[key])
-   if 'Home' not in counter:
-       counter['Home'] = 0
-   if 'Shop' not in counter:
-       counter['Shop'] = 0 
-   if 'Education' not in counter:
-       counter['Education'] = 0
-   if 'Other' not in counter:
-       counter['Other'] = 0
-   if 'Work' not in counter:
-       counter['Work'] = 0        
-   node_wise_dict_of_act[key] = counter
-   
-       
-with open('node_wise_city_characeristics.csv','w') as f:       
-   csvwriter = csv.writer(f)
-   csvwriter.writerow(['lat','lon','Home','Work','Education','Shopping','Other'])
-   for key in node_wise_dict_of_act:
-       try:
-           csvwriter.writerow([node_lat_lon[key][1], node_lat_lon[key][0], node_wise_dict_of_act[key]['Home'], node_wise_dict_of_act[key]['Work'], node_wise_dict_of_act[key]['Education'], node_wise_dict_of_act[key]['Shop'], node_wise_dict_of_act[key]['Other']])
-       except:
-           print ("Missing node id ", key)
-           continue
-
-
-# In[ ]:
-
-
-node_lat_lon[key]
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
 
