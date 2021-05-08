@@ -1,13 +1,15 @@
+import time 
+firstlinestarttime = time.time()
+
+
 ####################################
 ### SET THE VARIABLES and PATHS 
 ####################################
-
-
 calibrating_on_small_sample = False
 regenerate_graphs = True 
 load_graphs_in_RAM = False
 store_graphs_folder_name = 'FOR_IDO'
-HOW_MANY_PEOPLE = 10000  # set to -1 for running on full population
+HOW_MANY_HOUSEHOLDS = -1  # set to -1 for running on full population
 
 
 ### The following numbers are set to arbitrarily large indices
@@ -113,7 +115,7 @@ with open('AI_individual.csv') as f:
         hhid[pid] = int(listed[3])
 hhidlist = list(set(hhidlist))
 random.shuffle(hhidlist)
-hhidlist = set(hhidlist[:300])
+hhidlist = set(hhidlist[:HOW_MANY_HOUSEHOLDS])
 hhidlist = set(hhidlist)
 
 pid_list = [] 
@@ -200,8 +202,8 @@ for pid in hhid:
     else:
         hhid_pid_list[hhid[pid]].append(pid)
 
-if HOW_MANY_PEOPLE != -1:
-    print ("Smaller travel time table created by choosing ", HOW_MANY_PEOPLE," at random")
+if HOW_MANY_HOUSEHOLDS != -1:
+    print ("Smaller travel time table created by choosing ", HOW_MANY_HOUSEHOLDS," households at random")
 else:
     print ("Full population selected")
 
@@ -296,7 +298,6 @@ import numpy as np
 import gc
 
 
-
 # Filename: Activity_schedule
 """
 create a list of pids persons from traveltime.csv 
@@ -373,9 +374,8 @@ import gc
 
 
 
-
 globalTime = time.time()
-
+regenerate_graphs = True
 
 
 if regenerate_graphs:
@@ -786,9 +786,9 @@ def process_one_t(t):
 
 
 pool = Pool(1)                         # Create a multiprocessing Pool
-if regenerate_graphs:
-    pool.map(process_one_t, range(0,288)) 
-    print ("UNION of graph completed")
+pool.map(process_one_t, range(0,288)) 
+
+print ("UNION of graph completed")
 
 
 
@@ -796,10 +796,11 @@ if regenerate_graphs:
 
 G_loaded = {}
 
+import time
+import pickle
 
 if load_graphs_in_RAM:
-    import time
-    import pickle
+
     ## saving load time if there is a server
     G_loaded = {}
     for i in range(288):
@@ -825,7 +826,8 @@ d = {}
 
 ###### process and count new infections
 est_r_0 = []
-
+# ! pip install sortednp
+import sortednp as snp
 import numpy as np
 import multiprocessing
 
@@ -884,7 +886,7 @@ for initial_infections in [1000]*3:
          
     startTime = time.time()
     nodes_for_plotting = []
-    calibrated_theta_prime =   0.22
+    calibrated_theta_prime = 0.22
 
 
     backup_states = []
@@ -1072,8 +1074,8 @@ for initial_infections in [1000]*3:
 
 ###### process and count new infections
 est_r_0 = []
-
-
+# ! pip install sortednp
+import sortednp as snp
 import numpy as np
 import multiprocessing
 import matplotlib.pyplot as plt
@@ -1132,7 +1134,7 @@ for initial_infections in [200]:
          
     startTime = time.time()
     nodes_for_plotting = []
-    calibrated_theta_prime =  0.22 # after random fix # 0.25 # 0.07 
+    calibrated_theta_prime = 0.22 # after random fix # 0.25 # 0.07 
 
 
     backup_states = []
@@ -1526,7 +1528,7 @@ import matplotlib as mpl
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-
+mpl.style.use('seaborn')
 
 
 age_count_percentage = {}
@@ -1539,107 +1541,8 @@ for j in range(len(backup_states_loaded[0])):
 for key in range(8):
     print (key, round(age_count_percentage[key]*100/sum(age_count_percentage.values()),2),'%')
  
-agewise = np.random.rand(4,4,8) * 0   # 4 days;  # 5 for E/Ia/Is/D; # 8 age categories
-
-count = 0
-weekrange = range(32,36)
-for t in weekrange:
-    day_ = t*7+ 1
-    stateVector = backup_states_loaded[day_-1]
-    stateVectorPrev = backup_states_loaded[day_-1]
-
-  
-    for j in range(stateVector.shape[0]):
-        age_ = age_map[age[j]]
-        state = stateVector[j][0]
-        if state == 2:
-            agewise[count,0,age_] += 1   # E
-        if state == 4:
-            agewise[count,1,age_] += 1   # I a
-        if state == 3:
-            agewise[count,2,age_] += 1   # I s 
-        if state == 6:
-            agewise[count,3,age_] += 1   # D         
-    count += 1
-    
-    
-print (np.sum(agewise))
-import pandas as pd
-import numpy as np
-import altair as alt
-age_Cat_labels = ['0-9','10-19','20-29','30-39','40-49','50-59','60-69','>70']
-
-indexList = []
-for i in weekrange:
-    indexList.append('Week '+str(i+1))
-
-dflist = []
-for i in range(8):
-    dflist.append(pd.DataFrame(agewise[:,:,i],index=indexList,columns=['E','I a','I s','D']))
 
 
-def prep_df(df, name):
-    df = df.stack().reset_index()
-    df.columns =  ['c1', 'c2', 'values']
-    df['Age category'] = name
-    return df
-
-for i in range(8):
-    dflist[i] = prep_df(dflist[i], age_Cat_labels[i] + ' years' )
-
-
-df = pd.concat(dflist)
-
-alt.Chart(df).mark_bar().encode(
-    x=alt.X('c2:N', title=None),
-    y=alt.Y('sum(values):Q', axis=alt.Axis(grid=False, title=None)),
-    column=alt.Column('c1:N', title=None),
-    color=alt.Color('Age category:N', scale=alt.Scale(range=list((['#f7f4f9','#e7e1ef','#d4b9da','#c994c7','#df65b0','#e7298a','#ce1256','#91003f']))))
-).configure_view(
-    strokeOpacity=0    
-)
-
-
-# In[ ]:
-
-
-count = 0 
-for key in pidDict :
-    print (key, pidDict[key], age[pidDict[key]])
-    count += 1
-    if count > 10:
-        break
-
-
-# In[ ]:
-
-
-# normalising all EIRD so that the bars are of equal length
-# for i in range(5):
-#     for day in range(4):
-#         agewise[day,i,:] = agewise[day,i,:]*100/(np.sum(agewise[day,i,:]))
-# backup_states_loaded
-
-
-# In[ ]:
-
-
-agewise[:,-1,:]
-
-
-# In[ ]:
-
-
-os.system('tar -czvf stacked.tar.gz stacked')
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
 
 
 
@@ -1686,37 +1589,11 @@ for i in range(2,275):
     
 
 
-# plt.plot(range(len(r_t)), r_t,'--', label='R_t')
 
 
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-# count = 0
-# for i in range(1,10):
-#     stateVector = backup_states_loaded[i]  
-# #     for j in range(stateVector.shape[0]):
-# #         if stateVector[j][0] == 2 and backup_states_loaded[i-1][j][0] == 1:
-# #             count += 1
-# #     print (count, 191, count/191*100)
-#     print ((len(np.where(stateVector[:,0] == 2)[0])), (len(np.where(stateVector[:,0] == 4)[0])))
-
-
-# In[ ]:
 
 
 r_t_backup = list(r_t)
-
-
-# In[ ]:
-
-
 r_t = list(r_t_backup)
 
 
@@ -1733,9 +1610,9 @@ ax2 = ax1.twinx()
 # r_t_sm = np.convolve(r_t, np.ones((5,))/5, mode='same')
 # Death_rate_sm = np.convolve(Death_rate, np.ones((5,))/5, mode='same')
 # Inf_rate_sm = np.convolve(Inf_rate, np.ones((5,))/5, mode='same')
-print ("R_t_no_transit : ", r_t)
-print ("Death_rate_no_transit : ", Death_rate)
-print ("Infection_rate_no_transit : ", Inf_rate)
+print ("R_t : ", r_t)
+print ("Death_rate : ", Death_rate)
+print ("Infection_rate : ", Inf_rate)
 
 r_t_sm = np.convolve(r_t, np.ones((1,))/1, mode='same')
 Death_rate_sm = np.convolve(Death_rate, np.ones((1,))/1, mode='same')
@@ -2058,7 +1935,7 @@ plt.show()
 
 
 
-
+"""
 
 age_labels = {'0':'0-9', '1':'10-19','2':'20-29 ','3':'30-39','4':'40-49','5':'50-59','6':'60-69','7':'>70'}
 age_map = {0:0, 1:0, 2:1, 3:1, 4:2, 5:2, 6:3, 7:3, 8:4, 9:4, 10:5, 11:5, 12:6, 13:6, 14:7, 15:7, 16:7, 17:7}
@@ -2067,7 +1944,7 @@ import matplotlib as mpl
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-
+mpl.style.use('seaborn')
 
 
 age_count_percentage = {}
@@ -2095,54 +1972,14 @@ for t in weekrange:
         state = stateVector[j][0]
         if state == 2:
             agewise[count,0,age_] += 1   # E
-#         if state == 4:
-#             agewise[count,1,age_] += 1   # I a
-#         if state == 3:
-#             agewise[count,2,age_] += 1   # I s 
-#         if state == 6:
-#             agewise[count,3,age_] += 1   # D        
+  
     count += 1    
     
 print (np.sum(agewise))
 import pandas as pd
 import numpy as np
-import altair as alt
 age_Cat_labels = ['0-9','10-19','20-29','30-39','40-49','50-59','60-69','>70']
 
-indexList = []
-for i in weekrange:
-    indexList.append('Week '+str("{0:0=2d}".format(i+1)))
-
-dflist = []
-for i in range(8):
-    dflist.append(pd.DataFrame(agewise[:,0,i],index=indexList,columns=[' ']))
-
-
-def prep_df(df, name):
-    df = df.stack().reset_index()
-    df.columns =  ['c1', 'c2', 'values']
-    df['Age category'] = name
-    return df
-
-for i in range(8):
-    dflist[i] = prep_df(dflist[i], age_Cat_labels[i] + ' years' )
-
-
-df = pd.concat(dflist)
-print (df.head)
-alt.Chart(df).mark_bar(size=35).encode(
-    x=alt.X('c2:N', title=None),
-    y=alt.Y('sum(values):Q', axis=alt.Axis(grid=False, title=None)),
-    column=alt.Column('c1:N', title=None, header=alt.Header(labelAngle=-90,labelFontSize=40)),
-    color=alt.Color('Age category:N', scale=alt.Scale(range=list((['#fff5eb','#fee6ce','#fdd0a2','#fdae6b','#fd8d3c','#f16913','#d94801','#8c2d04']))))
-    
-).configure_view(
-    strokeOpacity=0  
-    
-).configure_axis(labelFontSize=20).configure_legend(labelFontSize=20,titleFontSize=20)
-
-
-# In[43]:
 
 
 
@@ -2197,40 +2034,7 @@ for t in weekrange:
 print (np.sum(agewise))
 import pandas as pd
 import numpy as np
-import altair as alt
 age_Cat_labels = ['0-9','10-19','20-29','30-39','40-49','50-59','60-69','>70']
-
-indexList = []
-for i in weekrange:
-    indexList.append('Week '+str("{0:0=2d}".format(i+1)))
-
-dflist = []
-for i in range(8):
-    dflist.append(pd.DataFrame(agewise[:,0,i],index=indexList,columns=[' ']))
-
-
-def prep_df(df, name):
-    df = df.stack().reset_index()
-    df.columns =  ['c1', 'c2', 'values']
-    df['Age category'] = name
-    return df
-
-for i in range(8):
-    dflist[i] = prep_df(dflist[i], age_Cat_labels[i] + ' years' )
-
-
-df = pd.concat(dflist)
-print (df.head)
-alt.Chart(df).mark_bar(size=35).encode(
-    x=alt.X('c2:N', title=None),
-    y=alt.Y('sum(values):Q', axis=alt.Axis(grid=False, title=None)),
-    column=alt.Column('c1:N', title=None, header=alt.Header(labelAngle=-90,labelFontSize=40)),
-    color=alt.Color('Age category:N', scale=alt.Scale(range=list((['#fff5f0','#fee0d2','#fcbba1','#fc9272','#fb6a4a','#ef3b2c','#cb181d','#99000d']))))
-    
-).configure_view(
-    strokeOpacity=0  
-    
-).configure_axis(labelFontSize=20).configure_legend(labelFontSize=20,titleFontSize=20)
 
 
 # In[ ]:
@@ -2245,7 +2049,7 @@ import matplotlib as mpl
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-
+mpl.style.use('seaborn')
 
 
 age_count_percentage = {}
@@ -2284,40 +2088,8 @@ for t in weekrange:
 print (np.sum(agewise))
 import pandas as pd
 import numpy as np
-import altair as alt
 age_Cat_labels = ['0-9','10-19','20-29','30-39','40-49','50-59','60-69','>70']
 
-indexList = []
-for i in weekrange:
-    indexList.append('Week '+str("{0:0=2d}".format(i+1)))
-
-dflist = []
-for i in range(8):
-    dflist.append(pd.DataFrame(agewise[:,0,i],index=indexList,columns=[' ']))
-
-
-def prep_df(df, name):
-    df = df.stack().reset_index()
-    df.columns =  ['c1', 'c2', 'values']
-    df['Age category'] = name
-    return df
-
-for i in range(8):
-    dflist[i] = prep_df(dflist[i], age_Cat_labels[i] + ' years' )
-
-
-df = pd.concat(dflist)
-print (df.head)
-alt.Chart(df).mark_bar(size=35).encode(
-    x=alt.X('c2:N', title=None),
-    y=alt.Y('sum(values):Q', axis=alt.Axis(grid=False, title=None)),
-    column=alt.Column('c1:N', title=None, header=alt.Header(labelAngle=-90,labelFontSize=40)),
-    color=alt.Color('Age category:N', scale=alt.Scale(range=list((['#f7f4f9','#e7e1ef','#d4b9da','#c994c7','#df65b0','#e7298a','#ce1256','#91003f']))))
-    
-).configure_view(
-    strokeOpacity=0  
-    
-).configure_axis(labelFontSize=20).configure_legend(labelFontSize=20,titleFontSize=20)
 
 
 # In[42]:
@@ -2340,7 +2112,7 @@ import matplotlib as mpl
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-
+mpl.style.use('seaborn')
 
 
 age_count_percentage = {}
@@ -2379,54 +2151,8 @@ for t in weekrange:
 print (np.sum(agewise))
 import pandas as pd
 import numpy as np
-import altair as alt
 age_Cat_labels = ['0-9','10-19','20-29','30-39','40-49','50-59','60-69','>70']
-
-indexList = []
-for i in weekrange:
-    indexList.append('Week '+str("{0:0=2d}".format(i+1)))
-
-dflist = []
-for i in range(8):
-    dflist.append(pd.DataFrame(agewise[:,0,i],index=indexList,columns=[' ']))
-
-
-def prep_df(df, name):
-    df = df.stack().reset_index()
-    df.columns =  ['c1', 'c2', 'values']
-    df['Age category'] = name
-    return df
-
-for i in range(8):
-    dflist[i] = prep_df(dflist[i], age_Cat_labels[i] + ' years' )
-
-
-df = pd.concat(dflist)
-print (df.head)
-alt.Chart(df).mark_bar(size=35).encode(
-    x=alt.X('c2:N', title=None),
-    y=alt.Y('sum(values):Q', axis=alt.Axis(grid=False, title=None)),
-    column=alt.Column('c1:N', title=None, header=alt.Header(labelAngle=-90,labelFontSize=40)),
-    color=alt.Color('Age category:N', scale=alt.Scale(range=list((['#ffffff','#f0f0f0','#d9d9d9','#bdbdbd','#969696','#737373','#525252','#252525']))))
-    
-).configure_view(
-    strokeOpacity=0  
-    
-).configure_axis(labelFontSize=20).configure_legend(labelFontSize=20,titleFontSize=20)
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
+"""
 # In[ ]:
 
 
@@ -2660,24 +2386,7 @@ with open('node_wise_state.csv','w') as f:
 # In[ ]:
 
 
-# checking K_n_d
-a = np.random.lognormal(1.62, 0.42, 1000000)
-b = 1 - np.exp(-1/a)
-print (1/np.mean(b))
-# plt.hist(b, 1000) 
 
-
-# In[ ]:
-
-
-# checking K_n_d
-a = np.random.lognormal(1.96, 0.42, 1000000)
-b = 1 - np.exp(-1/a)
-print (1/np.mean(b))
-# plt.hist(b, 1000) 
-
-
-# In[ ]:
 
 
 os.system(' tar -czvf images.tar.gz *.png')
@@ -2690,17 +2399,6 @@ os.system(' tar -czvf images.tar.gz *.png')
 
 
 
-# In[ ]:
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
 
 import matplotlib.pyplot as plt
 def plot_graph_properties(G_loaded, filename , dpi_=300):
@@ -2711,13 +2409,11 @@ def plot_graph_properties(G_loaded, filename , dpi_=300):
         neighbour_count = 0
         node_count = 0 
         n = 0
-
         if load_graphs_in_RAM == False:
             with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
                 G = pickle.load(handle)
         else:
-            G = G_loaded[i]
-
+            G = G_loaded[t]
         for dummy in G["backward"]:
             if 'ACT' in filename:
                 if not (dummy < 20000000 or dummy >= 50000000): 
@@ -2755,14 +2451,12 @@ def plot_graph_properties(G_loaded, filename , dpi_=300):
     for i in range(288):
         print (i)
         neighbour_count = 0
-        node_count = 0 
-
+        node_count = 0
         if load_graphs_in_RAM == False:
             with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
                 G = pickle.load(handle)
         else:
-            G = G_loaded[i]
-
+            G = G_loaded[t]
         for dummy in G["backward"]:
             n = len(G["backward"][dummy])
             if 'ACT' in filename:
@@ -2840,13 +2534,11 @@ def plot_graph_properties(G_loaded, filename , dpi_=300):
         neighbour_count = 0
         node_count = 0
         percentage_of_node_types = {}
-
         if load_graphs_in_RAM == False:
             with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
                 G = pickle.load(handle)
         else:
-            G = G_loaded[i]
-
+            G = G_loaded[t]
         for dummy in G["backward"]:
             n = len(G["backward"][dummy])
             if 'ACT' in filename:    
@@ -2946,7 +2638,6 @@ def plot_graph_properties(G_loaded, filename , dpi_=300):
 
 
 
-
 import matplotlib.pyplot as plt
 def plot_graph_properties(G_loaded, filename ,which_graphs, dpi_=300):
     # get average degree of graph
@@ -2956,13 +2647,12 @@ def plot_graph_properties(G_loaded, filename ,which_graphs, dpi_=300):
         neighbour_count = 0
         node_count = 0 
         n = 0
-
+        
         if load_graphs_in_RAM == False:
             with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
                 G = pickle.load(handle)
         else:
-            G = G_loaded[i]
-
+            G = G_loaded[t]
         for dummy in G["backward"]:
             if 'ACT' == which_graphs:
                 if not (dummy < 20000000 or dummy >= 50000000): 
@@ -3013,13 +2703,11 @@ def plot_graph_properties(G_loaded, filename ,which_graphs, dpi_=300):
     for i in range(288):
         neighbour_count = 0
         node_count = 0 
-
         if load_graphs_in_RAM == False:
             with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
                 G = pickle.load(handle)
         else:
-            G = G_loaded[i]
-
+            G = G_loaded[t]
         for dummy in G["backward"]:
             n = len(G["backward"][dummy])
             if 'ACT' == which_graphs:
@@ -3096,7 +2784,6 @@ def plot_graph_properties(G_loaded, filename ,which_graphs, dpi_=300):
 # In[161]:
 
 
-
 import matplotlib.pyplot as plt
 def plot_graph_properties_distribution(G_loaded, filename ,which_graphs, dpi_=300):
     # get average degree of graph
@@ -3111,13 +2798,6 @@ def plot_graph_properties_distribution(G_loaded, filename ,which_graphs, dpi_=30
     for i in range(288):
         neighbour_count = 0
         node_count = 0 
-
-        if load_graphs_in_RAM == False:
-            with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
-                G = pickle.load(handle)
-        else:
-            G = G_loaded[i]
-
         for dummy in G["backward"]:
             n = len(G["backward"][dummy])
 
@@ -3191,13 +2871,12 @@ def plot_graph_properties_distribution_non_weighted(G_loaded, filename ,which_gr
     for i in range(288):
         neighbour_count = 0
         node_count = 0 
-
+        
         if load_graphs_in_RAM == False:
             with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
                 G = pickle.load(handle)
         else:
-            G = G_loaded[i]
-
+            G = G_loaded[t]        
         for dummy in G["backward"]:
             n = len(G["backward"][dummy])
 
@@ -3303,7 +2982,7 @@ timeofdayticks = ['0:00 AM', '     ', '     ', '     ', '     ', '     ', '     
 
 # plot curves foor graph
 
-
+# mpl.style.use('seaborn')
 import matplotlib as mpl
 mpl.rc_file_defaults()
 
@@ -3360,7 +3039,7 @@ plt.show()
 
 # plot curves foor graph
 
-
+# mpl.style.use('seaborn')
 import matplotlib as mpl
 # font = {'weight' : 'bold',
 #         'size'   : 13}
@@ -3414,7 +3093,7 @@ plt.show()
 # In[ ]:
 
 
-
+# mpl.style.use('seaborn')
 import matplotlib as mpl
 import pickle
 import numpy as np
@@ -3557,7 +3236,7 @@ plt.show()
 
 # plot curves foor graph
 
-
+# mpl.style.use('seaborn')
 # mpl.rc_file_defaults()
 
 colormap = {'H':'#1b9e77','W':'#d95f02','E':'#7570b3','S':'#e7298a','O':'#66a61e','B':'#e6ab02','M':'#a6761d','Bus+MRT':'#666666'}
@@ -4016,3 +3695,93 @@ plt.show()
 
 # In[ ]:
 
+
+# get mode shares from DAS
+modes_share = {}
+das = []
+with open('AI_demand_BC') as f:
+    next(f)
+    for row in f:
+        listed = row.strip().split(',')
+        stop_mode = listed[7]
+        if stop_mode in modes_share:
+            modes_share[stop_mode] += 1
+        else:
+            modes_share[stop_mode] = 1
+        das.append(listed)
+            
+s = sum(modes_share.values())
+for mode in modes_share:
+
+    print (mode, round(modes_share[mode]/s*100,2), modes_share[mode],'%')
+
+
+# In[ ]:
+
+
+
+# trip start time
+trip_start_time = []
+for i in range(len(das)):
+    if das[i][4] !='Home':
+        continue
+    trip_start_time.append(float(das[i][13]))
+startTimeDict = {}
+for t in trip_start_time:
+    if t not in startTimeDict:
+        startTimeDict[t] = 1
+    else:
+        startTimeDict[t] += 1
+plt.hist(trip_start_time,20)
+for key in startTimeDict:
+    print (key,':[',round(startTimeDict[key]/sum(startTimeDict.values())*100,2),',', startTimeDict[key],'],',end='')
+counts_, bins_ = np.histogram(trip_start_time, 10)
+plt.plot(bins_[:-1], (counts_), color='orange', label='AS')    
+
+
+# In[ ]:
+
+
+
+node_lat_lon = {}
+node_dict = {}
+with open('AI_node_lat_lon.csv') as f:
+   for row in f:
+       listed = row.strip().split(',')
+       node_lat_lon[int(listed[0])] = [float(listed[1]), float(listed[2])]
+
+node_wise_dict_of_act = {}
+for i in range(len(das)):
+   if int(das[i][5]) in node_wise_dict_of_act:
+       node_wise_dict_of_act[int(das[i][5])].append(das[i][4])
+   else:
+       node_wise_dict_of_act[int(das[i][5])]= [das[i][4]]
+
+import collections    
+for key in node_wise_dict_of_act:
+   counter=collections.Counter(node_wise_dict_of_act[key])
+   if 'Home' not in counter:
+       counter['Home'] = 0
+   if 'Shop' not in counter:
+       counter['Shop'] = 0 
+   if 'Education' not in counter:
+       counter['Education'] = 0
+   if 'Other' not in counter:
+       counter['Other'] = 0
+   if 'Work' not in counter:
+       counter['Work'] = 0        
+   node_wise_dict_of_act[key] = counter
+   
+       
+with open('node_wise_city_characeristics.csv','w') as f:       
+   csvwriter = csv.writer(f)
+   csvwriter.writerow(['lat','lon','Home','Work','Education','Shopping','Other'])
+   for key in node_wise_dict_of_act:
+       try:
+           csvwriter.writerow([node_lat_lon[key][1], node_lat_lon[key][0], node_wise_dict_of_act[key]['Home'], node_wise_dict_of_act[key]['Work'], node_wise_dict_of_act[key]['Education'], node_wise_dict_of_act[key]['Shop'], node_wise_dict_of_act[key]['Other']])
+       except:
+           print ("Missing node id ", key)
+           continue
+
+print ("Whole script finished running")
+print ("firstlinestarttime to lastlinestarttime: ", time.time() - firstlinestarttime)
