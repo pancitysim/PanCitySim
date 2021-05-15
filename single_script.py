@@ -5,11 +5,12 @@ firstlinestarttime = time.time()
 ####################################
 ### SET THE VARIABLES and PATHS 
 ####################################
-calibrating_on_small_sample = False
-regenerate_graphs = True 
+REGENERATE_GRAPHS = True
 load_graphs_in_RAM = False
 store_graphs_folder_name = 'FOR_IDO'
-HOW_MANY_HOUSEHOLDS = -1  # set to -1 for running on full population
+CALIBRATING = True
+HOW_MANY_HOUSEHOLDS = 100000  # set to -1 for running on full population
+HOPSIZE = 12  # For faster creation of Graphs: set to 1 for limited RAM, find the correct value using hit and trial according to available RAM
 
 
 ### The following numbers are set to arbitrarily large indices
@@ -48,50 +49,36 @@ print ("Graph storage folders created!")
 
 
 
+
 node_lat_lon = {}
 node_dict = {}
 index = index_start['NODE']
 with open('AI_node_lat_lon.csv') as f:
-   for row in f:
-       listed = row.strip().split(',')
-       node_lat_lon[int(listed[0])] = [float(listed[1]), float(listed[2])]
-       if int(listed[0]) not in node_dict:
-           node_dict[int(listed[0])] = index 
-           index += 1
-
-
+    for row in f:
+        listed = row.strip().split(',')
+        node_lat_lon[int(listed[0])] = [float(listed[1]), float(listed[2])]
+        if int(listed[0]) not in node_dict:
+            node_dict[int(listed[0])] = index
+            index += 1
 
 voronoi_area = {}
 with open('AI_node_area_using_grids.csv') as f:
-   for row in f:
-       listed = row.strip().split(',')
-       voronoi_area[int(listed[0])] = float(listed[1])
+    for row in f:
+        listed = row.strip().split(',')
+        voronoi_area[int(listed[0])] = float(listed[1])
 
 node_wise_A = {}
 for node in node_dict:
-   if node in voronoi_area:
-       node_wise_A[node_dict[node]] = voronoi_area[node]
-   else:
-       node_wise_A[node_dict[node]] = sum(voronoi_area.values())/len(voronoi_area)
-print ("Dictionary of node wise areas created by using voronoi tesselations")
+    if node in voronoi_area:
+        node_wise_A[node_dict[node]] = voronoi_area[node]
+    else:
+        node_wise_A[node_dict[node]] = sum(voronoi_area.values()) / len(voronoi_area)
+print("Dictionary of node wise areas created by using voronoi tesselations")
 
 
 
-# get mode shares from DAS
-modes_share = {}
-with open('AI_demand_BC') as f:
-    for row in f:
-        listed = row.strip().split(',')
-        stop_mode = listed[7]
-        if stop_mode in modes_share:
-            modes_share[stop_mode] += 1
-        else:
-            modes_share[stop_mode] = 1
-s = sum(modes_share.values())
-print ("Mode shares from activity schedule")
-for mode in modes_share:
-    modes_share[mode] /= s 
-    print (mode, round(modes_share[mode]*100,2), '%')
+
+
 
 
 
@@ -102,110 +89,175 @@ for mode in modes_share:
 import csv
 
 import random
+import pickle
 
-# if calibrating_on_small_sample :
-hhidlist = []
-hhid = {}
-with open('AI_individual.csv') as f:
-    next(f)
-    for row in f:
-        listed = row.strip().split(',')
-        hhidlist.append(int(listed[3]))
-        pid = listed[0] + "-1"
-        hhid[pid] = int(listed[3])
-hhidlist = list(set(hhidlist))
-random.shuffle(hhidlist)
-hhidlist = set(hhidlist[:HOW_MANY_HOUSEHOLDS])
-hhidlist = set(hhidlist)
-
-pid_list = [] 
-with open('AI_individual.csv') as f:
-    next(f)
-    with open('tt','w') as f2:
-        csvwriter = csv.writer(f2)
-        for row in f:
-            listed = row.strip().split(',')
-            pid = listed[0] + "-1"
-            if int(listed[3]) in hhidlist:
-                csvwriter.writerow(listed)
-                pid_list.append(pid)
-os.system(' mv tt AI_individual.csv')
-
-pid_list = list(set(pid_list))
-# random.shuffle(pid_list)
-pid_list = set(pid_list)
+import gc
+gc.collect()
 
 
-pidDict = {}
-pid_list = list(pid_list)
-reverse_pidDict = {}
-for i in range(len(pid_list)):
-    pidDict[pid_list[i]] = i
-    reverse_pidDict[i] = pid_list[i]
+    # In[ ]:
 
 
-modes_share = {}
-with open('AI_demand_BC') as f:
-    next(f)
-    with open('tt','w') as f2:
-        csvwriter = csv.writer(f2)
-        for row in f:
-            listed = row.strip().split(',')
-            pid = listed[0]
-            if hhid[pid] in hhidlist:
-                csvwriter.writerow(listed)
-os.system(' mv tt AI_demand_BC')
+import numpy as np
+import csv
+import time
 
 
-
-
-with open('traveltime.csv') as f:
-    with open('tt','w') as f2:
-        csvwriter = csv.writer(f2)
-        for row in f:
-            listed = row.strip().split(',')
-            pid = listed[0]
-            if pid not in hhid:
-                continue
-            if hhid[pid] in hhidlist:
-                csvwriter.writerow(listed)
-os.system('mv tt traveltime.csv                ')
-
-
-
-hhid_unique_ids = []
-with open('AI_individual.csv') as f:
-    for row in f:
-        listed = row.strip().split(',')
-        hhid_unique_ids.append(int(listed[3]))
-
-hhid_unique_ids = list(set(hhid_unique_ids))
-hhidDict = {}
-reverse_hhidDict = {}
-for i in range(len(hhid_unique_ids)):
-    hhidDict[hhid_unique_ids[i]] = i + index_start['HHID']
-    reverse_hhidDict[i + index_start['HHID']] = hhid_unique_ids[i]        
+if REGENERATE_GRAPHS == True:
     
-age = {}
-hhid = {}
-with open('AI_individual.csv') as f:
-    for row in f:
-        listed = row.strip().split(',')
-        pid = listed[0]+"-1"
-        age[pidDict[pid]] = int(listed[11])
-        hhid[pidDict[pid]] = hhidDict[int(listed[3])]
-        
-hhid_pid_list = {}
-for pid in hhid:
-    if hhid[pid] not in hhid_pid_list:
-        hhid_pid_list[hhid[pid]] = [pid]
-    else:
-        hhid_pid_list[hhid[pid]].append(pid)
+    
 
-if HOW_MANY_HOUSEHOLDS != -1:
-    print ("Smaller travel time table created by choosing ", HOW_MANY_HOUSEHOLDS," households at random")
+
+    # get mode shares from DAS
+    modes_share = {}
+    with open('AI_demand_BC') as f:
+        for row in f:
+            listed = row.strip().split(',')
+            stop_mode = listed[7]
+            if stop_mode in modes_share:
+                modes_share[stop_mode] += 1
+            else:
+                modes_share[stop_mode] = 1
+    s = sum(modes_share.values())
+    print ("Mode shares from activity schedule")
+    for mode in modes_share:
+        modes_share[mode] /= s 
+        print (mode, round(modes_share[mode]*100,2), '%')
+
+
+    
+    
+
+    hhidlist = []
+    hhid = {}
+    with open('AI_individual.csv') as f:
+        next(f)
+        for row in f:
+            listed = row.strip().split(',')
+            hhidlist.append(int(listed[3]))
+            pid = listed[0] + "-1"
+            hhid[pid] = int(listed[3])
+    hhidlist = list(set(hhidlist))
+    random.shuffle(hhidlist)
+    hhidlist = set(hhidlist[:HOW_MANY_HOUSEHOLDS])
+    hhidlist = set(hhidlist)
+
+    pid_list = [] 
+    with open('AI_individual.csv') as f:
+        next(f)
+        with open('tt','w') as f2:
+            csvwriter = csv.writer(f2)
+            for row in f:
+                listed = row.strip().split(',')
+                pid = listed[0] + "-1"
+                if int(listed[3]) in hhidlist:
+                    csvwriter.writerow(listed)
+                    pid_list.append(pid)
+    os.system(' mv tt AI_individual.csv')
+
+    pid_list = list(set(pid_list))
+    # random.shuffle(pid_list)
+    pid_list = set(pid_list)
+
+
+    pidDict = {}
+    pid_list = list(pid_list)
+    reverse_pidDict = {}
+    for i in range(len(pid_list)):
+        pidDict[pid_list[i]] = i
+        reverse_pidDict[i] = pid_list[i]
+
+
+    modes_share = {}
+    with open('AI_demand_BC') as f:
+        next(f)
+        with open('tt','w') as f2:
+            csvwriter = csv.writer(f2)
+            for row in f:
+                listed = row.strip().split(',')
+                pid = listed[0]
+                if hhid[pid] in hhidlist:
+                    csvwriter.writerow(listed)
+    os.system(' mv tt AI_demand_BC')
+
+
+
+
+    with open('traveltime.csv') as f:
+        with open('tt','w') as f2:
+            csvwriter = csv.writer(f2)
+            for row in f:
+                listed = row.strip().split(',')
+                pid = listed[0]
+                if pid not in hhid:
+                    continue
+                if hhid[pid] in hhidlist:
+                    csvwriter.writerow(listed)
+    os.system('mv tt traveltime.csv                ')
+
+
+
+    hhid_unique_ids = []
+    with open('AI_individual.csv') as f:
+        for row in f:
+            listed = row.strip().split(',')
+            hhid_unique_ids.append(int(listed[3]))
+
+    hhid_unique_ids = list(set(hhid_unique_ids))
+    hhidDict = {}
+    reverse_hhidDict = {}
+    for i in range(len(hhid_unique_ids)):
+        hhidDict[hhid_unique_ids[i]] = i + index_start['HHID']
+        reverse_hhidDict[i + index_start['HHID']] = hhid_unique_ids[i]        
+
+    age = {}
+    hhid = {}
+    with open('AI_individual.csv') as f:
+        for row in f:
+            listed = row.strip().split(',')
+            pid = listed[0]+"-1"
+            age[pidDict[pid]] = int(listed[11])
+            hhid[pidDict[pid]] = hhidDict[int(listed[3])]
+
+            
+    if HOW_MANY_HOUSEHOLDS != -1:
+        print ("Smaller travel time table created by choosing ", HOW_MANY_HOUSEHOLDS," households at random")
+    else:
+        print ("Full population selected")
+
+            
+            
+
+
+    os.system(' mkdir running_statevectors')
+    with open('running_statevectors/hhid.pickle', 'wb') as handle:
+        pickle.dump(hhid, handle, protocol=pickle.HIGHEST_PROTOCOL) 
+    with open('running_statevectors/age.pickle', 'wb') as handle:
+        pickle.dump(age, handle, protocol=pickle.HIGHEST_PROTOCOL)    
+    with open('running_statevectors/pidDict.pickle', 'wb') as handle:
+        pickle.dump(pidDict, handle, protocol=pickle.HIGHEST_PROTOCOL) 
+    print ("dictionary of person ids to age/home-location saved to allow for repeatable runs later")
+
 else:
-    print ("Full population selected")
+    with open('running_statevectors/hhid.pickle', 'rb') as handle:
+        hhid = pickle.load(handle) 
+    with open('running_statevectors/age.pickle', 'rb') as handle:
+        age = pickle.load(handle)    
+    with open('running_statevectors/pidDict.pickle', 'rb') as handle:
+        pidDict = pickle.load(handle) 
+    print ("Graphs not regenerated; hence pidDict loaded to retain PiDs in Graph")
+
+
+
+            
+
+# hhid_pid_list = {}
+# for pid in hhid:
+#     if hhid[pid] not in hhid_pid_list:
+#         hhid_pid_list[hhid[pid]] = [pid]
+#     else:
+#         hhid_pid_list[hhid[pid]].append(pid)
+
 
 
 
@@ -217,27 +269,15 @@ gc.collect()
 
 
 
-
-import pickle
-os.system(' mkdir running_statevectors')
-with open('running_statevectors/hhid.pickle', 'wb') as handle:
-    pickle.dump(hhid, handle, protocol=pickle.HIGHEST_PROTOCOL) 
-with open('running_statevectors/age.pickle', 'wb') as handle:
-    pickle.dump(age, handle, protocol=pickle.HIGHEST_PROTOCOL)    
-with open('running_statevectors/pidDict.pickle', 'wb') as handle:
-    pickle.dump(pidDict, handle, protocol=pickle.HIGHEST_PROTOCOL) 
-print ("dictionary of person ids to age/home-location saved to allow for repeatable runs later")
-
-
-
-
-income = {}
-with open('AI_individual.csv') as f:
-    for row in f:
-        listed = row.strip().split(',')
-        pid = listed[0]+"-1"
-        income[pidDict[pid]] = int(listed[14])
-income_map = {1:'Less than 15,000',2:'15,000 - 24,999',3:'25,000 - 34,999',4:'35,000 - 49,999',5:'50,000 - 74,999',6:'75,000 - 99,999',7:'100,000 - 149,999',8:'150,000'}
+#### NOT needed, as we are not studying income distribution based disease propagatio
+#### If we want to retain, this dictionary must be saved
+# income = {}
+# with open('AI_individual.csv') as f:
+#     for row in f:
+#         listed = row.strip().split(',')
+#         pid = listed[0]+"-1"
+#         income[pidDict[pid]] = int(listed[14])
+# income_map = {1:'Less than 15,000',2:'15,000 - 24,999',3:'25,000 - 34,999',4:'35,000 - 49,999',5:'50,000 - 74,999',6:'75,000 - 99,999',7:'100,000 - 149,999',8:'150,000'}
 
 
 
@@ -255,18 +295,17 @@ import numpy as np
 
 
 globalTime = time.time()
-if regenerate_graphs:
+if REGENERATE_GRAPHS:
     print ("Home location graph creation started!")
-    hopsize = 1
     count = 0
-    for sttt in range(0,hopsize):
+    for sttt in range(0,HOPSIZE):
         forwardDict = {}
         backwardDict = {}
         for pid in hhid:
             if count % 10000 == 0:
                 print (count, 'PIDs processed')
             count += 1
-            for time_slots in range(sttt,288,hopsize):
+            for time_slots in range(sttt,288,HOPSIZE):
                 if time_slots not in forwardDict:
                     forwardDict[time_slots] = {}
                 forwardDict[time_slots][pid] = hhid[pid] 
@@ -277,7 +316,7 @@ if regenerate_graphs:
                 else:
                     backwardDict[time_slots][hhid[pid]] = [pid]
 
-        for time_slots in range(sttt,288,hopsize) :
+        for time_slots in range(sttt,288,HOPSIZE) :
             d = {}
             d['forward'] = forwardDict[time_slots]
             d['backward'] = backwardDict[time_slots]
@@ -307,53 +346,6 @@ We also create two dictionaries;
 """
 
 
-das_mem = []
-with open('AI_demand_BC') as f:
-    for row in f:
-        listed = row.strip().split(',')
-
-        stop_node = int(listed[5])
-        stop_zone = int(listed[6])
-        prev_stop_node = int(listed[11])
-        prev_stop_zone = int(listed[12])
-        ## nodes with missing data
-        if stop_node == 0 or stop_node == 8165 or prev_stop_node == 0 or prev_stop_node == 8165:
-            continue
-
-        das_mem.append(row.strip().split(','))
-
-
-# In[ ]:
-
-
-aaa = []
-act_type = {}
-with open('AI_demand_BC') as f:
-    for row in f:
-        listed = row.strip().split(',')
-        if listed[4] == 'Home':
-            continue
-        if listed[4] in act_type:
-            act_type[listed[4]] += 1
-        else:
-            act_type[listed[4]] = 1
-        aaa.append(pidDict[listed[0]])
-s = sum(act_type.values())
-
-print ("Destination types in activity schedule")
-for key in act_type:
-    print (key, round(act_type[key]/s*100,2))
-print (len(set(aaa)))
-
-
-
-
-aa = set(aaa)
-c = []
-for key in hhid:
-    if key not in  aa:
-        c.append(key)
-print (len(set(c)))
 
 
 
@@ -375,17 +367,65 @@ import gc
 
 
 globalTime = time.time()
-regenerate_graphs = True
 
 
-if regenerate_graphs:
+if REGENERATE_GRAPHS:
+    
+    das_mem = []
+    with open('AI_demand_BC') as f:
+        for row in f:
+            listed = row.strip().split(',')
+
+            stop_node = int(listed[5])
+            stop_zone = int(listed[6])
+            prev_stop_node = int(listed[11])
+            prev_stop_zone = int(listed[12])
+            ## nodes with missing data
+            if stop_node == 0 or stop_node == 8165 or prev_stop_node == 0 or prev_stop_node == 8165:
+                continue
+
+            das_mem.append(row.strip().split(','))
+
+
+    # In[ ]:
+
+
+    aaa = []
+    act_type = {}
+    with open('AI_demand_BC') as f:
+        for row in f:
+            listed = row.strip().split(',')
+            if listed[4] == 'Home':
+                continue
+            if listed[4] in act_type:
+                act_type[listed[4]] += 1
+            else:
+                act_type[listed[4]] = 1
+            aaa.append(pidDict[listed[0]])
+    s = sum(act_type.values())
+
+    print ("Destination types in activity schedule")
+    for key in act_type:
+        print (key, round(act_type[key]/s*100,2))
+    print (len(set(aaa)))
+
+
+
+
+    aa = set(aaa)
+    c = []
+    for key in hhid:
+        if key not in  aa:
+            c.append(key)
+    print (len(set(c)))
+    
+    
     print ("ACT graphs started!")
-    hopsize = 6
-    for sttt in range(0,hopsize):
+    for sttt in range(0,HOPSIZE):
         forwardDict = {}
         backwardDict = {}
         count = 1
-        relevant_ts = set(range(sttt,288,hopsize))
+        relevant_ts = set(range(sttt,288,HOPSIZE))
 
         for listed in das_mem:    
             count += 1
@@ -442,7 +482,7 @@ if regenerate_graphs:
                 else:
                     backwardDict[time_slots][node_seq] = [pidDict[pid]]
 
-        for time_slots in range(sttt,288,hopsize) :
+        for time_slots in range(sttt,288,HOPSIZE) :
             if time_slots not in forwardDict:
                 forwardDict[time_slots] = {}
             if time_slots not in backwardDict:
@@ -457,198 +497,187 @@ if regenerate_graphs:
     print ("ACT graphs creation complete!")
 
 
-# In[ ]:
-
-
-import gc
-gc.collect()
-
-
-# In[ ]:
-
-
-import numpy as np
-import csv
-import time
-
-"""
-Table: journey_time
-Column name 	Data Type 	Description
-0  pt_stop_id 	character (50) 	PT stop ID
-1  pt_line_id 	character (50) 	PT line ID
-2  trip_id 	integer 	Run number ID of that PT line
-3  pc_occ 	double precision 	Percentage of occupancy of that vehicle at that stop
-4  sequence_id 	integer 	Sequence ID of the stop in the route of the PT line
-5  arrival_time 	time without time zone 	Arrival time of the vehicle at that stop
-6  waiting_time 	time without time zone 	Waiting/dwell time of vehicle at that stop
-"""
-
-# creating a map with 
-# key: (<bus_line>, <stop id>, <time_slot>) 
-# value: (<bus_line>, <trip_id_of_bus>) 
-M_JT = {}  # Map from journeytime.csv file
-a = []
-with open('journeytime.csv') as f:
-    for row in f:
-        listed = row.strip().split(',')
-        
-        arr_t = (listed[5])
-        hh,mm,ss = arr_t.split(':')
-        ss = int(hh) * 3600 + int(mm) * 60 + int(ss)
-        M_JT[(listed[1], (listed[0]), int(ss//(300)))] = ( listed[1], int(listed[2])) # 5 minute intervals: 60*5 = 300 seconds
+    # In[ ]:
 
 
 
+    """
+    Table: journey_time
+    Column name 	Data Type 	Description
+    0  pt_stop_id 	character (50) 	PT stop ID
+    1  pt_line_id 	character (50) 	PT line ID
+    2  trip_id 	integer 	Run number ID of that PT line
+    3  pc_occ 	double precision 	Percentage of occupancy of that vehicle at that stop
+    4  sequence_id 	integer 	Sequence ID of the stop in the route of the PT line
+    5  arrival_time 	time without time zone 	Arrival time of the vehicle at that stop
+    6  waiting_time 	time without time zone 	Waiting/dwell time of vehicle at that stop
+    """
 
-"""
-Filename: Traveltime.csv
-This output is configured in the output_statistics section of simrun_MidTerm.xml file as follows.
-<travel_time file="traveltime.csv"/>
-This file contains the travel time for each person for each trip. Travel Time file also includes the waiting time for Public Transit
-
-Currently it includes the following travel modes: ON_BUS, ON_MRT, ON_PBUS (private bus), WALK, WAIT_BUS, WAIT_MRT, ON_SHARINGCAR, ON_TAXI
-
-The format of the CSV that is generated is given below:
-
-   0 person_id.
-   1 trip_origin_id: Trip Starting node id.
-   2 trip_dest_id: Trip Ending node id.
-   3 subtrip_origin_id.
-   4 subtrip_dest_id.
-   5 subtrip_origin_type: Node/Bus stop/MRT station.
-   6 subtrip_dest_type: Node/Bus stop/MRT station.
-   7 travel_mode.
-   8 arrival_time.
-   9 travel_time: unit: seconds
-  10 pt_line: Public transport (Bus/MRT line)
-
-
-Expanded Traveltime.csv because of these scenarios
-4043757-1,52107,54976,475,483,BS,BS,WAIT_BUS,06:01:55,205,23_0_230065/23_0_230067/23_0_230071/23_0_230070
-
-"""
-different_names = {}
-with open('tt_expanded.csv','w') as f:
-    csvwriter = csv.writer(f)
-    with open('traveltime.csv') as f2:
-        for row in f2:
+    # creating a map with 
+    # key: (<bus_line>, <stop id>, <time_slot>) 
+    # value: (<bus_line>, <trip_id_of_bus>) 
+    M_JT = {}  # Map from journeytime.csv file
+    a = []
+    with open('journeytime.csv') as f:
+        for row in f:
             listed = row.strip().split(',')
-            if listed[7] not in ['ON_BUS', 'ON_MRT','WAIT_MRT', 'WAIT_BUS']:
-                continue            
-            if '/' in listed[3]:
-                listed_3_expanded = listed[3].split('/')
+
+            arr_t = (listed[5])
+            hh,mm,ss = arr_t.split(':')
+            ss = int(hh) * 3600 + int(mm) * 60 + int(ss)
+            M_JT[(listed[1], (listed[0]), int(ss//(300)))] = ( listed[1], int(listed[2])) # 5 minute intervals: 60*5 = 300 seconds
+
+
+
+
+    """
+    Filename: Traveltime.csv
+    This output is configured in the output_statistics section of simrun_MidTerm.xml file as follows.
+    <travel_time file="traveltime.csv"/>
+    This file contains the travel time for each person for each trip. Travel Time file also includes the waiting time for Public Transit
+
+    Currently it includes the following travel modes: ON_BUS, ON_MRT, ON_PBUS (private bus), WALK, WAIT_BUS, WAIT_MRT, ON_SHARINGCAR, ON_TAXI
+
+    The format of the CSV that is generated is given below:
+
+       0 person_id.
+       1 trip_origin_id: Trip Starting node id.
+       2 trip_dest_id: Trip Ending node id.
+       3 subtrip_origin_id.
+       4 subtrip_dest_id.
+       5 subtrip_origin_type: Node/Bus stop/MRT station.
+       6 subtrip_dest_type: Node/Bus stop/MRT station.
+       7 travel_mode.
+       8 arrival_time.
+       9 travel_time: unit: seconds
+      10 pt_line: Public transport (Bus/MRT line)
+
+
+    Expanded Traveltime.csv because of these scenarios
+    4043757-1,52107,54976,475,483,BS,BS,WAIT_BUS,06:01:55,205,23_0_230065/23_0_230067/23_0_230071/23_0_230070
+
+    """
+    different_names = {}
+    with open('tt_expanded.csv','w') as f:
+        csvwriter = csv.writer(f)
+        with open('traveltime.csv') as f2:
+            for row in f2:
+                listed = row.strip().split(',')
+                if listed[7] not in ['ON_BUS', 'ON_MRT','WAIT_MRT', 'WAIT_BUS']:
+                    continue            
+                if '/' in listed[3]:
+                    listed_3_expanded = listed[3].split('/')
+                else:
+                    listed_3_expanded = [listed[3]]
+
+                if '/' in listed[10]:
+                    listed_10_expanded = listed[10].split('/')
+                else:
+                    listed_10_expanded = [listed[10]]
+
+                for i in listed_3_expanded:
+                    for j in listed_10_expanded:
+                        tt = list(listed)
+                        if listed[7] in ['ON_MRT']:  #'WAIT_MRT' is already updated; no need to change here again
+                            tt[3] = i + "_"+ j.split('_')[1] 
+                        else:
+                            tt[3] = i
+                        tt[10] = j
+                        csvwriter.writerow(tt)
+
+
+
+
+    # In[ ]:
+
+
+
+
+    """
+    S_keys : a dictionary to map all spatial keys to numbers ; 
+    for travel modes in [ON_MRT, ON_BUS], the spatial identifier is (<Bus/MRT Line>,<>)
+    """
+
+    startTime = time.time()
+    S_keys = {}
+    count_mismatches = 0 
+    count_matches = 0 
+    max_slide = 0 
+    index_bus = index_start['BUSLINE_TRIPNUM'] 
+    index_mrt = index_start['MRTLINE_TRIPNUM'] 
+    unique_bus_mrt_lines = []
+    pt_location_wise_A = {}
+    validLinesCount = 0
+    ccc = 0 
+    with open('tt_expanded.csv') as f:
+        for row in f:
+            listed = row.strip().split(',')
+
+            if listed[7] not in [ 'ON_MRT', 'ON_BUS','WAIT_MRT', 'WAIT_BUS']:
+                continue
+
+            pid = listed[0]
+            arr_t = (listed[8])
+            hh,mm,ss = arr_t.split(':')
+            ss = int(hh) * 3600 + int(mm) * 60 + int(ss)
+
+            strt_t = ss - int(listed[9])   
+
+            arr_five_min_int = ss // 300
+            start_five_min_int = strt_t // 300
+
+            st_key = (listed[10], listed[3], arr_five_min_int)
+            # print (st_key)
+
+            problematicRow = False
+            if st_key not in M_JT:
+                tt = st_key[2]
+                counter = 0 
+                while((st_key[0], st_key[1], tt)) not in M_JT:
+                    tt -= 1
+                    counter += 1
+                    if counter > 1:
+                        problematicRow = True
+                        break
+                if max_slide < st_key[2] - tt :
+                    max_slide = st_key[2] - tt                   
+                st_key = (st_key[0], st_key[1], tt) 
+            if problematicRow:
+                continue
             else:
-                listed_3_expanded = [listed[3]]
-                
-            if '/' in listed[10]:
-                listed_10_expanded = listed[10].split('/')
-            else:
-                listed_10_expanded = [listed[10]]
-                
-            for i in listed_3_expanded:
-                for j in listed_10_expanded:
-                    tt = list(listed)
-                    if listed[7] in ['ON_MRT']:  #'WAIT_MRT' is already updated; no need to change here again
-                        tt[3] = i + "_"+ j.split('_')[1] 
-                    else:
-                        tt[3] = i
-                    tt[10] = j
-                    csvwriter.writerow(tt)
-                
+                validLinesCount += 1
+
+            if st_key not in M_JT:
+                continue
+            pt_line_trip_id = M_JT[st_key]
+
+
+            if pt_line_trip_id not in S_keys:
+                if listed[7] in [ 'ON_MRT', 'WAIT_MRT']: # , 'WAIT_BUS']:'ON_BUS'
+                    S_keys[pt_line_trip_id] = index_mrt 
+                    index_mrt += 1
+                if listed[7] in [ 'ON_BUS', 'WAIT_BUS']: # , 'WAIT_BUS']:'ON_BUS'
+                    S_keys[pt_line_trip_id] = index_bus 
+                    index_bus += 1
 
 
 
-# In[ ]:
+                unique_bus_mrt_lines.append(listed[10])
 
-
-
-
-"""
-S_keys : a dictionary to map all spatial keys to numbers ; 
-for travel modes in [ON_MRT, ON_BUS], the spatial identifier is (<Bus/MRT Line>,<>)
-"""
-
-import time
-startTime = time.time()
-S_keys = {}
-count_mismatches = 0 
-count_matches = 0 
-max_slide = 0 
-index_bus = index_start['BUSLINE_TRIPNUM'] 
-index_mrt = index_start['MRTLINE_TRIPNUM'] 
-unique_bus_mrt_lines = []
-pt_location_wise_A = {}
-validLinesCount = 0
-ccc = 0 
-with open('tt_expanded.csv') as f:
-    for row in f:
-        listed = row.strip().split(',')
-
-        if listed[7] not in [ 'ON_MRT', 'ON_BUS','WAIT_MRT', 'WAIT_BUS']:
-            continue
-
-        pid = listed[0]
-        arr_t = (listed[8])
-        hh,mm,ss = arr_t.split(':')
-        ss = int(hh) * 3600 + int(mm) * 60 + int(ss)
-
-        strt_t = ss - int(listed[9])   
-
-        arr_five_min_int = ss // 300
-        start_five_min_int = strt_t // 300
-        
-        st_key = (listed[10], listed[3], arr_five_min_int)
-        # print (st_key)
-        
-        problematicRow = False
-        if st_key not in M_JT:
-            tt = st_key[2]
-            counter = 0 
-            while((st_key[0], st_key[1], tt)) not in M_JT:
-                tt -= 1
-                counter += 1
-                if counter > 1:
-                    problematicRow = True
-                    break
-            if max_slide < st_key[2] - tt :
-                max_slide = st_key[2] - tt                   
-            st_key = (st_key[0], st_key[1], tt) 
-        if problematicRow:
-            continue
-        else:
-            validLinesCount += 1
-        
-        if st_key not in M_JT:
-            continue
-        pt_line_trip_id = M_JT[st_key]
-        
-        
-        if pt_line_trip_id not in S_keys:
-            if listed[7] in [ 'ON_MRT', 'WAIT_MRT']: # , 'WAIT_BUS']:'ON_BUS'
-                S_keys[pt_line_trip_id] = index_mrt 
-                index_mrt += 1
-            if listed[7] in [ 'ON_BUS', 'WAIT_BUS']: # , 'WAIT_BUS']:'ON_BUS'
-                S_keys[pt_line_trip_id] = index_bus 
-                index_bus += 1
-
-        
-
-            unique_bus_mrt_lines.append(listed[10])
-
-print (" Maximum slide: possibility of errors! ", max_slide)
-print (" Time taken to read through traveltime.csv file ", time.time() - startTime)
-print (" Number of (bus/MRT_line, trip_number) combo ", len(S_keys))
-print (" Number of unique MRT/Bus lines ", len(set(unique_bus_mrt_lines)))
-print ("Number of valid lines processed ", validLinesCount)
+    print (" Maximum slide: possibility of errors! ", max_slide)
+    print (" Time taken to read through traveltime.csv file ", time.time() - startTime)
+    print (" Number of (bus/MRT_line, trip_number) combo ", len(S_keys))
+    print (" Number of unique MRT/Bus lines ", len(set(unique_bus_mrt_lines)))
+    print ("Number of valid lines processed ", validLinesCount)
 
 
 
 
 
-"""
-Creating ST graph for PT
-"""
-if regenerate_graphs:
+    """
+    Creating ST graph for PT
+    """
+
     print ("PT graph, i.e. bus/MRT/WAITING_BUS/WAIT_MRT graphs creation started!")
 
     starTime = time.time()
@@ -732,63 +761,63 @@ if regenerate_graphs:
 
 
 
-# In[ ]:
 
 
 
 
-# UNION of act and PT  and HHID graphs
-# Since the resolution of PT graph is higher, In cases of clash, the PT graph gets precedence
-import pickle
-from multiprocessing import Pool
 
-print ("UNION of graph started")
-def process_one_t(t):
-    with open(store_graphs_folder_name+'/HOME_dicts/home_dict_'+str(t)+'.pickle', 'rb') as handle:
-        g_act = pickle.load(handle)
-        # converting g_act["backward"] to set for faster removal
-        for dummy in g_act["backward"]:
-            g_act["backward"][dummy] = set(g_act["backward"][dummy])
+    # UNION of act and PT  and HHID graphs
+    # Since the resolution of PT graph is higher, In cases of clash, the PT graph gets precedence
+    import pickle
+    from multiprocessing import Pool
 
-    aa = []
-    with open(store_graphs_folder_name+'/ACT_dicts/act_dict_'+str(t)+'.pickle', 'rb') as handle:
-        g_pt = pickle.load(handle)
+    print ("UNION of graph started")
+    def process_one_t(t):
+        with open(store_graphs_folder_name+'/HOME_dicts/home_dict_'+str(t)+'.pickle', 'rb') as handle:
+            g_act = pickle.load(handle)
+            # converting g_act["backward"] to set for faster removal
+            for dummy in g_act["backward"]:
+                g_act["backward"][dummy] = set(g_act["backward"][dummy])
+
+        aa = []
+        with open(store_graphs_folder_name+'/ACT_dicts/act_dict_'+str(t)+'.pickle', 'rb') as handle:
+            g_pt = pickle.load(handle)
+            for dummy in g_pt["backward"]:
+                aa.append(dummy)
+
+
+        # removing clashes
+        mark_for_removal = []
+        for pid in g_act["forward"]:
+            if pid in g_pt["forward"]:
+                g_act["backward"][g_act["forward"][pid]].remove(pid)
+                mark_for_removal.append(pid)
+        for pid in mark_for_removal:
+            del g_act["forward"][pid]
+
+        # taking union
+        g_union = g_act
+        for pid in g_pt["forward"]:
+            assert( pid not in g_union["forward"])
+            g_union["forward"][pid] = g_pt["forward"][pid]
         for dummy in g_pt["backward"]:
-            aa.append(dummy)
-
-
-    # removing clashes
-    mark_for_removal = []
-    for pid in g_act["forward"]:
-        if pid in g_pt["forward"]:
-            g_act["backward"][g_act["forward"][pid]].remove(pid)
-            mark_for_removal.append(pid)
-    for pid in mark_for_removal:
-        del g_act["forward"][pid]
-
-    # taking union
-    g_union = g_act
-    for pid in g_pt["forward"]:
-        assert( pid not in g_union["forward"])
-        g_union["forward"][pid] = g_pt["forward"][pid]
-    for dummy in g_pt["backward"]:
-        assert( dummy not in g_union["backward"])
-        g_union["backward"][dummy] = g_pt["backward"][dummy]
+            assert( dummy not in g_union["backward"])
+            g_union["backward"][dummy] = g_pt["backward"][dummy]
 
 
 
-    ####### UNION OF RESULT WITH PT #######
+        ####### UNION OF RESULT WITH PT #######
 
 
 
-    with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'wb') as handle:
-        pickle.dump(g_union, handle, protocol=pickle.HIGHEST_PROTOCOL)        
+        with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'wb') as handle:
+            pickle.dump(g_union, handle, protocol=pickle.HIGHEST_PROTOCOL)        
 
 
-pool = Pool(1)                         # Create a multiprocessing Pool
-pool.map(process_one_t, range(0,288)) 
+    pool = Pool(10)                         # Create a multiprocessing Pool
+    pool.map(process_one_t, range(0,288)) 
 
-print ("UNION of graph completed")
+    print ("UNION of graph completed")
 
 
 
@@ -826,245 +855,247 @@ d = {}
 
 ###### process and count new infections
 est_r_0 = []
-# ! pip install sortednp
-import sortednp as snp
-import numpy as np
-import multiprocessing
-
-master_start_time = time.time()
-
-
-# 1: S
-# 2: E
-# 3: I_s
-# 4: I_a
-# 5: R
-# 6: D
-
-d_D_mu_sigma = {}
-with open('age_wise_mu_and_sigma_for_D.csv') as f:
-    next(f)
-    for row in f:
-        listed = row.strip().split(',')
-        d_D_mu_sigma[int(listed[0])] = {'mu':float(listed[1]), 'sigma':float(listed[2])}
-
-age_map = {0:0, 1:0, 2:1, 3:1, 4:2, 5:2, 6:3, 7:3, 8:4, 9:4, 10:5, 11:5, 12:6, 13:6, 14:7, 15:7, 16:7, 17:7}
-for initial_infections in [1000]*3:
-  
-    st_dict = {} # keeping track of total stats
+if CALIBRATING == True:
+    print ("Calibrating Disabled ")
+    xx = 3/0 # stop code
     
-    stateVector = np.random.rand(len(pidDict),2) * 0 
-    stateVector [:,1] = 0
-    
-    
-    rho_binary = np.random.rand(len(pidDict),1) * 0  # binary values to decide whether the person is going to go to I_s or not
-    count_missing_age = 0 
-    count_missing_pt_areas = 0 
-    for i in range(rho_binary.shape[0]):
-        if i not in age:
-            print ("Missing PID index in age dict ",i)
-            continue
-        
-        age_ = age_map[age[i]]
-        if age_ > 2:
-            rho = 0.8
-        else:
-            rho = 0.4
-        
-        r = np.random.rand()
-        if r < rho:
-            rho_binary[i,0] = 1   # marked for progression to I_S
+    import numpy as np
+    import multiprocessing
+
+    master_start_time = time.time()
 
 
-    # everyone is susceptible
-    stateVector[:,:] = [1,0]
-    n_X = initial_infections 
-    
-    for i in range(len(pidDict)):
-        if np.random.rand() < initial_infections/len(pidDict):
-            stateVector[i,:] = [4,0]
-         
-    startTime = time.time()
-    nodes_for_plotting = []
-    calibrated_theta_prime = 0.22
+    # 1: S
+    # 2: E
+    # 3: I_s
+    # 4: I_a
+    # 5: R
+    # 6: D
+
+    d_D_mu_sigma = {}
+    with open('age_wise_mu_and_sigma_for_D.csv') as f:
+        next(f)
+        for row in f:
+            listed = row.strip().split(',')
+            d_D_mu_sigma[int(listed[0])] = {'mu':float(listed[1]), 'sigma':float(listed[2])}
+
+    age_map = {0:0, 1:0, 2:1, 3:1, 4:2, 5:2, 6:3, 7:3, 8:4, 9:4, 10:5, 11:5, 12:6, 13:6, 14:7, 15:7, 16:7, 17:7}
+    for initial_infections in [1000]*3:
+
+        st_dict = {} # keeping track of total stats
+
+        stateVector = np.random.rand(len(pidDict),2) * 0 
+        stateVector [:,1] = 0
 
 
-    backup_states = []
-    pids_to_be_removed_from_population = set([])
-    ilist = []
+        rho_binary = np.random.rand(len(pidDict),1) * 0  # binary values to decide whether the person is going to go to I_s or not
+        count_missing_age = 0 
+        count_missing_pt_areas = 0 
+        for i in range(rho_binary.shape[0]):
+            if i not in age:
+                print ("Missing PID index in age dict ",i)
+                continue
 
-    infections_per_node = {}
-    recoveries_per_node = {}    
-    deaths_per_node = {}
-    for ii in range(730):
-        infections_per_node[ii] = {}
-        recoveries_per_node[ii] = {}
-        deaths_per_node[ii] = {}
-        
-    for day_num in range(5) : # days
-        
-
-        for t in range(0,288):  # 1 day   
-
-            d = time.time()
-            if load_graphs_in_RAM == False:
-                with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
-                    G = pickle.load(handle)
+            age_ = age_map[age[i]]
+            if age_ > 2:
+                rho = 0.8
             else:
-                G = G_loaded[t]
-            
-         
-            numberOfInfectiousNeigboursTracker = {}   ## key:location   ## value count
-            a = time.time()
-            indices_of_infected = (np.where(stateVector[:,0] == 4)[0])
-            for pid in indices_of_infected:
-                if pid in pids_to_be_removed_from_population:
-                    continue
-                if pid not in G['forward']:
-                    continue
+                rho = 0.4
 
-                
-                if G['forward'][pid] not in numberOfInfectiousNeigboursTracker :
-                    numberOfInfectiousNeigboursTracker[G['forward'][pid]] = 1
+            r = np.random.rand()
+            if r < rho:
+                rho_binary[i,0] = 1   # marked for progression to I_S
+
+
+        # everyone is susceptible
+        stateVector[:,:] = [1,0]
+        n_X = initial_infections 
+
+        for i in range(len(pidDict)):
+            if np.random.rand() < initial_infections/len(pidDict):
+                stateVector[i,:] = [4,0]
+
+        startTime = time.time()
+        nodes_for_plotting = []
+        calibrated_theta_prime = 0.25
+
+
+        backup_states = []
+        pids_to_be_removed_from_population = set([])
+        ilist = []
+
+        infections_per_node = {}
+        recoveries_per_node = {}    
+        deaths_per_node = {}
+        for ii in range(730):
+            infections_per_node[ii] = {}
+            recoveries_per_node[ii] = {}
+            deaths_per_node[ii] = {}
+
+        for day_num in range(5) : # days
+
+
+            for t in range(0,288):  # 1 day   
+
+                d = time.time()
+                if load_graphs_in_RAM == False:
+                    with open(store_graphs_folder_name+'/UNION_dicts/union_dict_'+str(t)+'.pickle', 'rb') as handle:
+                        G = pickle.load(handle)
                 else:
-                    numberOfInfectiousNeigboursTracker[G['forward'][pid]] += 1
-            b = time.time()
+                    G = G_loaded[t]
 
 
-            for dummy in G['backward']:
-                if dummy not in numberOfInfectiousNeigboursTracker:
-                    continue
-                
-                    
-                if dummy < 20000000 or dummy >= 50000000:    ### NODE ACTIVITY 
-                    assert(not(dummy>=50000000 and dummy<60000000 )) # should never happen
-                    if dummy >= 60000000 and dummy < 70000000:  # WORK 
-                        area_of_this_dummy = node_wise_A[dummy - index_start['WORK_NODE']]
-                    elif dummy >= 70000000 and dummy < 80000000:  # EDUCATION :
-                        area_of_this_dummy = node_wise_A[dummy - index_start['EDUCATION_NODE']]
-                    elif dummy >= 80000000 and dummy < 90000000:  # SHOPPING :
-                        area_of_this_dummy = node_wise_A[dummy - index_start['SHOPPING_NODE']]
-                    elif dummy >= 90000000 and dummy < 100000000:  # OTHER :
-                        area_of_this_dummy = node_wise_A[dummy - index_start['OTHER_NODE']]
+                numberOfInfectiousNeigboursTracker = {}   ## key:location   ## value count
+                a = time.time()
+                indices_of_infected = (np.where(stateVector[:,0] == 4)[0])
+                for pid in indices_of_infected:
+                    if pid in pids_to_be_removed_from_population:
+                        continue
+                    if pid not in G['forward']:
+                        continue
 
-                    if area_of_this_dummy > 39800000:
-                        area_of_this_dummy = 39800000
-                    sigma = area_of_this_dummy * 0.0572  # 0.05 * 0.00040941176 # 0.048 * 0.005
-                    sigma_x = sigma
-                    sigma_y = sigma
-                    infectious_ppl = np.random.multivariate_normal([0,0], ([sigma_x,0],[0,sigma_y]), numberOfInfectiousNeigboursTracker[dummy])
-                    p_n = np.random.multivariate_normal([0,0], ([sigma_x,0],[0,sigma_y]), 1)
-                    d = np.sum((p_n - infectious_ppl)**2, axis = 1)
-                    mean_dist = np.mean(d**0.5)  
-                    ilist.append(mean_dist)
-                    
-                elif dummy >= 30000000 and dummy < 50000000:    ## PT 
-                    if dummy < 40000000:  # BUS
-                        L = 2.759 * (4**0.333)  # (A_bus * 1/4) ** 0.5 
-                    else: # MRT
-                        L = 3.314 * (25**0.333)# (A_mrt_coach * 1/5) ** 0.5  
-                    mean_dist = L * 0.5014
-                elif dummy < 30000000 and dummy >= 20000000:  ##HOME 
-                    mean_dist = 6.5
-                    
-                summation_i_tau = 1/((mean_dist) ** 3) * numberOfInfectiousNeigboursTracker[dummy]
-                Phi_n_t = 1 - np.exp( - calibrated_theta_prime * summation_i_tau)
 
-                if numberOfInfectiousNeigboursTracker[dummy] > 0:
-                    for pid in G['backward'][dummy]:        
-                        if pid in pids_to_be_removed_from_population:
-                            continue                        
-                        if np.random.rand() < Phi_n_t and stateVector[pid,0] == 1:
-                            stateVector[pid,0] = 2 
-#                             if dummy < 20000000 or dummy >= 50000000: # only tracking the cases which occur during performing an activity
-                            if dummy not in infections_per_node[day_num]:
-                                infections_per_node[day_num][dummy] = 1
-                            else:
-                                infections_per_node[day_num][dummy] += 1
-            c = time.time()
-            
-#             print (t, a-d, b-a, c-b, " seconds " )
-
-        # getting total stats from state vector
-        st_dict['S',day_num+1] = len(np.where(stateVector[:,0] == 1)[0])
-        st_dict['E',day_num+1]  = len(np.where(stateVector[:,0] == 2)[0])
-        st_dict['I_s',day_num+1]  = len(np.where(stateVector[:,0] == 3)[0])
-        st_dict['I_a',day_num+1]  = len(np.where(stateVector[:,0] == 4)[0])
-        st_dict['R',day_num+1]  = len(np.where(stateVector[:,0] == 5)[0])
-        st_dict['D',day_num+1]  = len(np.where(stateVector[:,0] == 6)[0])
-
-        ll = []
-        for ii in range(len(ilist)):
-            if ilist[ii] < 200:
-                ll.append(ilist[ii])
-#         plt.hist(ll, 100)
-#         plt.show()
-        
-        backup_states.append(np.array(stateVector))
-        for i in range(stateVector.shape[0]): 
-            # I_s -> R or I_a -> R
-            if stateVector[i,0] == 3 or stateVector[i,0] == 4 :
-                d_I = np.random.lognormal(1.96, 0.42 ** 0.5, 1)   # mu = 1.62; sigma_square = 0.42
-                Y_n_d = 1 - np.exp(-1/d_I)
-                if np.random.rand() < Y_n_d:
-                    stateVector[i,0] = 5   
-                    hhid_ = hhid[i]
-                    if hhid_ not in recoveries_per_node[day_num]:
-                        recoveries_per_node[day_num][hhid_] = 1
+                    if G['forward'][pid] not in numberOfInfectiousNeigboursTracker :
+                        numberOfInfectiousNeigboursTracker[G['forward'][pid]] = 1
                     else:
-                        recoveries_per_node[day_num][hhid_] += 1                    
-                    
-        ### actual updates of states
-        for i in range(stateVector.shape[0]):
-        # I_s -> D 
-            if stateVector[i,0] == 3 :
-                age_ = age_map[age[i]]
-                d_D =  np.random.lognormal(d_D_mu_sigma[age_]['mu'], d_D_mu_sigma[age_]['sigma'], 1)   # average of 30 days of hospitalisation before death
-                Mu_n_d = 1 - np.exp(-1/d_D)
-                if np.random.rand() < Mu_n_d:
-                    stateVector[i,0] = 6   
-                    hhid_ = hhid[i]
-                    if hhid_ not in deaths_per_node[day_num]:
-                        deaths_per_node[day_num][hhid_] = 1
-                    else:
-                        deaths_per_node[day_num][hhid_] += 1
-                        
-        # E -> I_a
-#         for i in range(stateVector.shape[0]): 
-#             if rho_binary[i] != 1:   # good news
-#                 if stateVector[i,0] == 2 :
-#                     d_L = np.random.lognormal(1.62, 0.42 ** 0.5, 1)   # mu = 1.62; sigma_square = 0.42
-#                     K_n_d = 1 - np.exp(-1/d_L)
-#                     if np.random.rand() < K_n_d:
-#                         stateVector[i,0] = 4                    
-        
-        for i in range(stateVector.shape[0]):      
-            # E -> I_s
-            if rho_binary[i] == 1:  # bad news
-                if stateVector[i,0] == 2 :
-                    d_L = np.random.lognormal(1.62, 0.42 ** 0.5, 1)   # mu = 1.62; sigma_square = 0.42
-                    K_n_d = 1 - np.exp(-1/d_L)
-                    if np.random.rand() < K_n_d:
-                        stateVector[i,0] = 3
-                        pids_to_be_removed_from_population.add(i)
-        
-                        
-#         print ("Count of missing age: ", count_missing_age)
-#         print ("Count ``of missing PT area: ", count_missing_pt_areas)        
-    print ("S: " , st_dict['S',day_num+1], "E: ", st_dict['E',day_num+1], "I_s: ",st_dict['I_s',day_num+1], "I_a: ", st_dict['I_a',day_num+1], "R: ",st_dict['R',day_num+1], "D: ", st_dict['D',day_num+1])                                         
-    print ("R_0 at ",day_num+1," days ", st_dict['E',day_num+1]/1000)
+                        numberOfInfectiousNeigboursTracker[G['forward'][pid]] += 1
+                b = time.time()
 
 
-# 
-# ### Estimating $\theta ' $ using the equation below
-# $$R_0 = \frac{1}{X}\sum_m^X\sum_n^S ( 1 - e^{-\Theta'\sum_m \tau_{nm}})$$
+                for dummy in G['backward']:
+                    if dummy not in numberOfInfectiousNeigboursTracker:
+                        continue
+
+
+                    if dummy < 20000000 or dummy >= 50000000:    ### NODE ACTIVITY 
+                        assert(not(dummy>=50000000 and dummy<60000000 )) # should never happen
+                        if dummy >= 60000000 and dummy < 70000000:  # WORK 
+                            area_of_this_dummy = node_wise_A[dummy - index_start['WORK_NODE']]
+                        elif dummy >= 70000000 and dummy < 80000000:  # EDUCATION :
+                            area_of_this_dummy = node_wise_A[dummy - index_start['EDUCATION_NODE']]
+                        elif dummy >= 80000000 and dummy < 90000000:  # SHOPPING :
+                            area_of_this_dummy = node_wise_A[dummy - index_start['SHOPPING_NODE']]
+                        elif dummy >= 90000000 and dummy < 100000000:  # OTHER :
+                            area_of_this_dummy = node_wise_A[dummy - index_start['OTHER_NODE']]
+
+                        if area_of_this_dummy > 39800000:
+                            area_of_this_dummy = 39800000
+                        sigma = area_of_this_dummy * 0.0572  # 0.05 * 0.00040941176 # 0.048 * 0.005
+                        sigma_x = sigma
+                        sigma_y = sigma
+                        infectious_ppl = np.random.multivariate_normal([0,0], ([sigma_x,0],[0,sigma_y]), numberOfInfectiousNeigboursTracker[dummy])
+                        p_n = np.random.multivariate_normal([0,0], ([sigma_x,0],[0,sigma_y]), 1)
+                        d = np.sum((p_n - infectious_ppl)**2, axis = 1)
+                        mean_dist = np.mean(d**0.5)  
+                        ilist.append(mean_dist)
+
+                    elif dummy >= 30000000 and dummy < 50000000:    ## PT 
+                        if dummy < 40000000:  # BUS
+                            L = 2.759 * (4**0.333)  # (A_bus * 1/4) ** 0.5 
+                        else: # MRT
+                            L = 3.314 * (25**0.333)# (A_mrt_coach * 1/5) ** 0.5  
+                        mean_dist = L * 0.5014
+                    elif dummy < 30000000 and dummy >= 20000000:  ##HOME 
+                        mean_dist = 6.5
+
+                    summation_i_tau = 1/((mean_dist) ** 3) * numberOfInfectiousNeigboursTracker[dummy]
+                    Phi_n_t = 1 - np.exp( - calibrated_theta_prime * summation_i_tau)
+
+                    if numberOfInfectiousNeigboursTracker[dummy] > 0:
+                        for pid in G['backward'][dummy]:        
+                            if pid in pids_to_be_removed_from_population:
+                                continue                        
+                            if np.random.rand() < Phi_n_t and stateVector[pid,0] == 1:
+                                stateVector[pid,0] = 2 
+    #                             if dummy < 20000000 or dummy >= 50000000: # only tracking the cases which occur during performing an activity
+                                if dummy not in infections_per_node[day_num]:
+                                    infections_per_node[day_num][dummy] = 1
+                                else:
+                                    infections_per_node[day_num][dummy] += 1
+                c = time.time()
+
+    #             print (t, a-d, b-a, c-b, " seconds " )
+
+            # getting total stats from state vector
+            st_dict['S',day_num+1] = len(np.where(stateVector[:,0] == 1)[0])
+            st_dict['E',day_num+1]  = len(np.where(stateVector[:,0] == 2)[0])
+            st_dict['I_s',day_num+1]  = len(np.where(stateVector[:,0] == 3)[0])
+            st_dict['I_a',day_num+1]  = len(np.where(stateVector[:,0] == 4)[0])
+            st_dict['R',day_num+1]  = len(np.where(stateVector[:,0] == 5)[0])
+            st_dict['D',day_num+1]  = len(np.where(stateVector[:,0] == 6)[0])
+
+            ll = []
+            for ii in range(len(ilist)):
+                if ilist[ii] < 200:
+                    ll.append(ilist[ii])
+    #         plt.hist(ll, 100)
+    #         plt.show()
+
+            backup_states.append(np.array(stateVector))
+            for i in range(stateVector.shape[0]): 
+                # I_s -> R or I_a -> R
+                if stateVector[i,0] == 3 or stateVector[i,0] == 4 :
+                    d_I = np.random.lognormal(1.96, 0.42 ** 0.5, 1)   # mu = 1.62; sigma_square = 0.42
+                    Y_n_d = 1 - np.exp(-1/d_I)
+                    if np.random.rand() < Y_n_d:
+                        stateVector[i,0] = 5   
+                        hhid_ = hhid[i]
+                        if hhid_ not in recoveries_per_node[day_num]:
+                            recoveries_per_node[day_num][hhid_] = 1
+                        else:
+                            recoveries_per_node[day_num][hhid_] += 1                    
+
+            ### actual updates of states
+            for i in range(stateVector.shape[0]):
+            # I_s -> D 
+                if stateVector[i,0] == 3 :
+                    age_ = age_map[age[i]]
+                    d_D =  np.random.lognormal(d_D_mu_sigma[age_]['mu'], d_D_mu_sigma[age_]['sigma'], 1)   # average of 30 days of hospitalisation before death
+                    Mu_n_d = 1 - np.exp(-1/d_D)
+                    if np.random.rand() < Mu_n_d:
+                        stateVector[i,0] = 6   
+                        hhid_ = hhid[i]
+                        if hhid_ not in deaths_per_node[day_num]:
+                            deaths_per_node[day_num][hhid_] = 1
+                        else:
+                            deaths_per_node[day_num][hhid_] += 1
+
+            # E -> I_a
+    #         for i in range(stateVector.shape[0]): 
+    #             if rho_binary[i] != 1:   # good news
+    #                 if stateVector[i,0] == 2 :
+    #                     d_L = np.random.lognormal(1.62, 0.42 ** 0.5, 1)   # mu = 1.62; sigma_square = 0.42
+    #                     K_n_d = 1 - np.exp(-1/d_L)
+    #                     if np.random.rand() < K_n_d:
+    #                         stateVector[i,0] = 4                    
+
+            for i in range(stateVector.shape[0]):      
+                # E -> I_s
+                if rho_binary[i] == 1:  # bad news
+                    if stateVector[i,0] == 2 :
+                        d_L = np.random.lognormal(1.62, 0.42 ** 0.5, 1)   # mu = 1.62; sigma_square = 0.42
+                        K_n_d = 1 - np.exp(-1/d_L)
+                        if np.random.rand() < K_n_d:
+                            stateVector[i,0] = 3
+                            pids_to_be_removed_from_population.add(i)
+
+
+    #         print ("Count of missing age: ", count_missing_age)
+    #         print ("Count ``of missing PT area: ", count_missing_pt_areas)        
+        print ("S: " , st_dict['S',day_num+1], "E: ", st_dict['E',day_num+1], "I_s: ",st_dict['I_s',day_num+1], "I_a: ", st_dict['I_a',day_num+1], "R: ",st_dict['R',day_num+1], "D: ", st_dict['D',day_num+1])                                         
+        print ("R_0 at ",day_num+1," days ", st_dict['E',day_num+1]/1000)
+
+
+    # 
+    # ### Estimating $\theta ' $ using the equation below
+    # $$R_0 = \frac{1}{X}\sum_m^X\sum_n^S ( 1 - e^{-\Theta'\sum_m \tau_{nm}})$$
 
 
 
 
-# ! tar -czvf Np_pkl.tar.gz pt_dicts/NP_pt*.pickle
+    # ! tar -czvf Np_pkl.tar.gz pt_dicts/NP_pt*.pickle
 
-
+    
 
 
 
@@ -1077,10 +1108,15 @@ est_r_0 = []
 # ! pip install sortednp
 import sortednp as snp
 import numpy as np
+import threading
 import multiprocessing
 import matplotlib.pyplot as plt
 master_start_time = time.time()
 os.system(' mkdir running_statevectors')
+
+
+
+
 
 # 1: S
 # 2: E
@@ -1088,6 +1124,8 @@ os.system(' mkdir running_statevectors')
 # 4: I_a
 # 5: R
 # 6: D
+
+
 
 d_D_mu_sigma = {}
 with open('age_wise_mu_and_sigma_for_D.csv') as f:
@@ -1134,7 +1172,7 @@ for initial_infections in [200]:
          
     startTime = time.time()
     nodes_for_plotting = []
-    calibrated_theta_prime = 0.22 # after random fix # 0.25 # 0.07 
+    calibrated_theta_prime = 0.25 # after random fix # 0.25 # 0.07 
 
 
     backup_states = []
@@ -1182,10 +1220,9 @@ for initial_infections in [200]:
             for dummy in G['backward']:
                 if dummy not in numberOfInfectiousNeigboursTracker:
                     continue
-                
-                    
-                if dummy < 20000000 or dummy >= 50000000:    ### NODE ACTIVITY 
-                    assert(not(dummy>=50000000 and dummy<60000000 )) # should never happen
+
+                if dummy < 20000000 or dummy >= 50000000:  ### NODE ACTIVITY 
+                    assert (not (dummy >= 50000000 and dummy < 60000000))  # should never happen
                     if dummy >= 60000000 and dummy < 70000000:  # WORK 
                         area_of_this_dummy = node_wise_A[dummy - index_start['WORK_NODE']]
                     elif dummy >= 70000000 and dummy < 80000000:  # EDUCATION :
@@ -1197,38 +1234,42 @@ for initial_infections in [200]:
 
                     if area_of_this_dummy > 39800000:
                         area_of_this_dummy = 39800000
-                    sigma = area_of_this_dummy * 0.0572 # 0.00040941176 # 0.048 * 0.005
+                    sigma = area_of_this_dummy * 0.0572  # 0.00040941176 # 0.048 * 0.005
                     sigma_x = sigma
                     sigma_y = sigma
-                    infectious_ppl = np.random.multivariate_normal([0,0], ([sigma_x,0],[0,sigma_y]), numberOfInfectiousNeigboursTracker[dummy])
-                    p_n = np.random.multivariate_normal([0,0], ([sigma_x,0],[0,sigma_y]), 1)
-                    d = np.sum((p_n - infectious_ppl)**2, axis = 1)
-                    mean_dist = np.mean(d**0.5)  
+                    infectious_ppl = np.random.multivariate_normal([0, 0], ([sigma_x, 0], [0, sigma_y]),
+                                                                   numberOfInfectiousNeigboursTracker[dummy])
+                    p_n = np.random.multivariate_normal([0, 0], ([sigma_x, 0], [0, sigma_y]), 1)
+                    d = np.sum((p_n - infectious_ppl) ** 2, axis=1)
+                    mean_dist = np.mean(d ** 0.5)
                     ilist.append(mean_dist)
-                    
-                elif dummy >= 30000000 and dummy < 50000000:    ## PT 
+
+                elif dummy >= 30000000 and dummy < 50000000:  ## PT 
                     if dummy < 40000000:  # BUS
-                        L = 2.759 * (4**0.333) # (A_bus * 1/4) ** 0.5 
-                    else: # MRT
-                        L = 3.314 * (25 ** 0.333) # (A_mrt_coach * 1/5) ** 0.5  
+                        L = 2.759 * (4 ** 0.333)  # (A_bus * 1/4) ** 0.5 
+                    else:  # MRT
+                        L = 3.314 * (25 ** 0.333)  # (A_mrt_coach * 1/5) ** 0.5  
                     mean_dist = L * 0.5014
                 elif dummy < 30000000 and dummy >= 20000000:  ##HOME 
                     mean_dist = 6.5
-                    
-                summation_i_tau = 1/((mean_dist) ** 3) * numberOfInfectiousNeigboursTracker[dummy]
-                Phi_n_t = 1 - np.exp( - calibrated_theta_prime * summation_i_tau)
+
+                summation_i_tau = 1 / ((mean_dist) ** 3) * numberOfInfectiousNeigboursTracker[dummy]
+                Phi_n_t = 1 - np.exp(- calibrated_theta_prime * summation_i_tau)
 
                 if numberOfInfectiousNeigboursTracker[dummy] > 0:
-                    for pid in G['backward'][dummy]:        
+                    for pid in G['backward'][dummy]:
                         if pid in pids_to_be_removed_from_population:
-                            continue                        
-                        if np.random.rand() < Phi_n_t and stateVector[pid,0] == 1:
-                            stateVector[pid,0] = 2 
-#                             if dummy < 20000000 or dummy >= 50000000: # only tracking the cases which occur during performing an activity
+                            continue
+                        if np.random.rand() < Phi_n_t and stateVector[pid, 0] == 1:
+                            stateVector[pid, 0] = 2
+                            #                             if dummy < 20000000 or dummy >= 50000000: # only tracking the cases which occur during performing an activity
                             if dummy not in infections_per_node[day_num]:
                                 infections_per_node[day_num][dummy] = 1
                             else:
                                 infections_per_node[day_num][dummy] += 1
+                
+                
+                
             c = time.time()
             
 #             print (t, a-d, b-a, c-b, " seconds " )
@@ -1347,28 +1388,6 @@ for i in range(275):
 
 
 
-# In[ ]:
-
-
-# import pickle
-# path_for_backup_file = 'running_statevectors'
-# with open(path_for_backup_file+'/age_at_day'+str(i)+'.pickle','rb') as handle:
-#     age = pickle.load(handle)     
-
-
-# In[ ]:
-
-
-# path_for_backup_file = 'RUNS_MAY_28_FINAL'
-# with open(path_for_backup_file+'/infections_per_node_day274.pickle', 'rb') as handle:
-#     infections_per_node = pickle.load(handle)
-
-
-# In[ ]:
-
-
-
-
 
 # In[ ]:
 
@@ -1438,7 +1457,7 @@ plt.tight_layout()
 
 # plt.grid()
 
-plt.savefig("output_images/overall_state_theta_SEIR.png", dpi=600)
+plt.savefig("output_images/overall_state_theta_SEIR.png", dpi=300)
 plt.show()
 
 
@@ -1459,7 +1478,7 @@ plt.ylabel("Number of individuals ", fontsize=20)
 # plt.legend(loc = 'upper right', fontsize=8)
 plt.tight_layout()
 
-plt.savefig("output_images/overall_state_theta_SEIR_log_scale.png", dpi=600)
+plt.savefig("output_images/overall_state_theta_SEIR_log_scale.png", dpi=300)
 
 plt.show()
 
@@ -1479,10 +1498,10 @@ plt.xlabel("Day",fontsize=20)
 plt.ylabel("Number of individuals ",fontsize=20)
 # plt.legend(loc = 'best')
 plt.tight_layout()
-plt.ylim(0,140000)
+#plt.ylim(0,140000)
 # plt.grid()
 
-plt.savefig("output_images/overall_state_theta_SEIR_S_R_removed.png", dpi=600)
+plt.savefig("output_images/overall_state_theta_SEIR_S_R_removed.png", dpi=300)
 
 plt.show()
 
@@ -1504,8 +1523,8 @@ plt.xlabel("Day",fontsize=20)
 plt.ylabel("Number of individuals ", fontsize=20)
 # plt.legend(loc = 'best')
 plt.tight_layout()
-plt.ylim(0,140000)
-plt.savefig("output_images/overall_state_theta_SEIR_S_R_removed_zoomed_towards_outbreak.png", dpi=600)
+#plt.ylim(0,140000)
+plt.savefig("output_images/overall_state_theta_SEIR_S_R_removed_zoomed_towards_outbreak.png", dpi=300)
 
 plt.show()
 
@@ -1528,7 +1547,7 @@ import matplotlib as mpl
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-mpl.style.use('seaborn')
+# mpl.style.use('seaborn')
 
 
 age_count_percentage = {}
@@ -1636,7 +1655,7 @@ ax2.set_ylabel('Infection rate/Death rate', fontsize=20, color='#525252')
 plt.tight_layout()
 plt.legend(loc='best', fontsize=10)
 # plt.grid()
-plt.savefig('output_images/R_t.png',dpi=600)
+plt.savefig('output_images/R_t.png',dpi=300)
 plt.show()
 
 # ax2.set_ylabel('Y2 data', color='b')
@@ -1672,7 +1691,7 @@ plt.legend(loc='center right', fontsize=10)
 # plt.grid()
 
 plt.tight_layout()
-plt.savefig('output_images/R_t smoothed.png',dpi=600)
+plt.savefig('output_images/R_t smoothed.png',dpi=300)
 plt.show()
 
 # ax2.set_ylabel('Y2 data', color='b')
@@ -1713,7 +1732,7 @@ plt.plot(range((270)), r_t[:270],'orange', label='R(t)')
 plt.plot(range((270)), Death_rate_fraction[:270], 'black', label = 'Fraction of deaths')
 plt.plot(range((270)), Inf_rate_fraction[:270], 'red', label = 'Fraction of new infections')
 plt.legend(loc = 'best')
-plt.savefig("output_images/R(t) .png", dpi=600)
+plt.savefig("output_images/R(t) .png", dpi=300)
 plt.show()
 
 
@@ -1753,7 +1772,7 @@ plt.plot(range((270)), r_tt[:270],'orange', label='R(t) (moving average 5 days)'
 plt.plot(range((270)), Death_rate_fraction[:270], 'black', label = 'Fraction of deaths (moving average 5 days)')
 plt.plot(range((270)), Inf_rate_fraction[:270], 'red', label = 'Fraction of new infections (moving average 5 days)')
 plt.legend(loc = 'best')
-plt.savefig("output_images/R(t) moving average of 5 days.png", dpi=600)
+plt.savefig("output_images/R(t) moving average of 5 days.png", dpi=300)
 plt.show()
 
 
@@ -1826,7 +1845,7 @@ plt.yscale('log')
 plt.xlabel('Day')
 plt.tight_layout()
 plt.xlabel('Day', fontsize=20)
-plt.savefig('output_images/activity_wise_infections_logscale.png',dpi=600)
+plt.savefig('output_images/activity_wise_infections_logscale.png',dpi=300)
 plt.show()
 
 plt.plot(range(len(infections_at_Home)), infections_at_Home, label='Home',c=colormap['H'])
@@ -1841,7 +1860,7 @@ plt.plot(range(len(infections_at_other)), infections_at_other, label='Other',c=c
 plt.tight_layout()
 plt.xlabel('Day')
 plt.xlabel('Day', fontsize=20)
-plt.savefig('output_images/activity_wise_infections_linear_scale.png',dpi=600)
+plt.savefig('output_images/activity_wise_infections_linear_scale.png',dpi=300)
 plt.show()
 
 
@@ -1866,7 +1885,7 @@ plt.yscale('log')
 plt.legend(fontsize=10)
 plt.tight_layout()
 plt.xlabel('Day', fontsize=20)
-plt.savefig('output_images/activity_wise_infections_logscale_smoothed.png',dpi=600)
+plt.savefig('output_images/activity_wise_infections_logscale_smoothed.png',dpi=300)
 plt.show()
 
 
@@ -1881,7 +1900,7 @@ plt.plot(range(len(infections_at_other)), infections_at_other, label='Other',c=c
 plt.legend(fontsize=10)
 plt.tight_layout()
 plt.xlabel('Day', fontsize=20)
-plt.savefig('output_images/activity_wise_infections_linear_scale_smoothed.png',dpi=600)
+plt.savefig('output_images/activity_wise_infections_linear_scale_smoothed.png',dpi=300)
 plt.show()
 
 #### double smoothing
@@ -1906,7 +1925,7 @@ plt.yscale('log')
 plt.xlabel('Day', fontsize=20)
 # plt.legend(fontsize=10)
 plt.tight_layout()
-plt.savefig('output_images/activity_wise_infections_logscale_double_smoothed.png',dpi=600)
+plt.savefig('output_images/activity_wise_infections_logscale_double_smoothed.png',dpi=300)
 plt.show()
 
 
@@ -1921,7 +1940,7 @@ plt.plot(range(len(infections_at_other)), infections_at_other, label='Other',c=c
 # plt.legend(fontsize=20)
 plt.xlabel('Day', fontsize=20)
 plt.tight_layout()
-plt.savefig('output_images/activity_wise_infections_linear_scale_double_smoothed.png',dpi=600)
+plt.savefig('output_images/activity_wise_infections_linear_scale_double_smoothed.png',dpi=300)
 plt.show()
 
 
@@ -2477,18 +2496,7 @@ def plot_graph_properties(G_loaded, filename , dpi_=300):
                 elif dummy >= 90000000 and dummy < 100000000:  # OTHER :
                     area_of_this_dummy = node_wise_A[dummy - index_start['OTHER_NODE']]
 
-#                 sigma = area_of_this_dummy * 0.048 * 0.01
-#                 sigma_x = sigma
-#                 sigma_y = sigma
-#                 infectious_ppl = np.random.multivariate_normal([0,0], ([sigma_x,0],[0,sigma_y]), n)
-#                 p_n = np.random.multivariate_normal([0,0], ([sigma_x,0],[0,sigma_y]), 1)
-#                 d = np.sum((p_n - infectious_ppl)**2, axis = 1)
-#                 try:
-#                     mean_dist = np.mean(d**0.5)  
-#                 except:
-#                     error_count += 1
-#                     mean_dist = 1
- 
+
                 r = (area_of_this_dummy / 3.14) ** 0.5 
                 mean_dist = 128*r/(45*3.14)
 
@@ -2912,12 +2920,12 @@ def plot_graph_properties_distribution_non_weighted(G_loaded, filename ,which_gr
 # In[163]:
 
 
-plot_graph_properties(G_loaded, '_AS_OTHER_FULLPOP_',which_graphs='OTHER', dpi_ = 600)
-plot_graph_properties(G_loaded, '_AS_WORK_FULLPOP_',which_graphs='WORK', dpi_ = 600)
-plot_graph_properties(G_loaded, '_AS_EDUCATION_FULLPOP_',which_graphs='EDUCATION', dpi_ = 600)
-plot_graph_properties(G_loaded, '_AS_SHOPPING_FULLPOP_',which_graphs='SHOPPING', dpi_ = 600)
-plot_graph_properties(G_loaded, '_AS_PT_FULLPOP_',which_graphs='PT', dpi_ = 600)
-plot_graph_properties(G_loaded, '_AS_UNION_FULLPOP_',which_graphs='UNION', dpi_ = 600)
+plot_graph_properties(G_loaded, '_AS_OTHER_FULLPOP_',which_graphs='OTHER', dpi_ = 300)
+plot_graph_properties(G_loaded, '_AS_WORK_FULLPOP_',which_graphs='WORK', dpi_ = 300)
+plot_graph_properties(G_loaded, '_AS_EDUCATION_FULLPOP_',which_graphs='EDUCATION', dpi_ = 300)
+plot_graph_properties(G_loaded, '_AS_SHOPPING_FULLPOP_',which_graphs='SHOPPING', dpi_ = 300)
+plot_graph_properties(G_loaded, '_AS_PT_FULLPOP_',which_graphs='PT', dpi_ = 300)
+plot_graph_properties(G_loaded, '_AS_UNION_FULLPOP_',which_graphs='UNION', dpi_ = 300)
 
 
 # In[168]:
@@ -2930,23 +2938,23 @@ print (a)
 # In[162]:
 
 
-plot_graph_properties_distribution(G_loaded, '_AS_OTHER_FULLPOP_',which_graphs='OTHER', dpi_ = 600)
-plot_graph_properties_distribution(G_loaded, '_AS_WORK_FULLPOP_',which_graphs='WORK', dpi_ = 600)
-plot_graph_properties_distribution(G_loaded, '_AS_EDUCATION_FULLPOP_',which_graphs='EDUCATION', dpi_ = 600)
-plot_graph_properties_distribution(G_loaded, '_AS_SHOPPING_FULLPOP_',which_graphs='SHOPPING', dpi_ = 600)
-plot_graph_properties_distribution(G_loaded, '_AS_PT_FULLPOP_',which_graphs='PT', dpi_ = 600)
-plot_graph_properties_distribution(G_loaded, '_AS_UNION_FULLPOP_',which_graphs='UNION', dpi_ = 600)
+plot_graph_properties_distribution(G_loaded, '_AS_OTHER_FULLPOP_',which_graphs='OTHER', dpi_ = 300)
+plot_graph_properties_distribution(G_loaded, '_AS_WORK_FULLPOP_',which_graphs='WORK', dpi_ = 300)
+plot_graph_properties_distribution(G_loaded, '_AS_EDUCATION_FULLPOP_',which_graphs='EDUCATION', dpi_ = 300)
+plot_graph_properties_distribution(G_loaded, '_AS_SHOPPING_FULLPOP_',which_graphs='SHOPPING', dpi_ = 300)
+plot_graph_properties_distribution(G_loaded, '_AS_PT_FULLPOP_',which_graphs='PT', dpi_ = 300)
+plot_graph_properties_distribution(G_loaded, '_AS_UNION_FULLPOP_',which_graphs='UNION', dpi_ = 300)
 
 
 # In[182]:
 
 
-plot_graph_properties_distribution_non_weighted(G_loaded, '_AS_OTHER_FULLPOP_',which_graphs='OTHER', dpi_ = 600)
-plot_graph_properties_distribution_non_weighted(G_loaded, '_AS_WORK_FULLPOP_',which_graphs='WORK', dpi_ = 600)
-plot_graph_properties_distribution_non_weighted(G_loaded, '_AS_EDUCATION_FULLPOP_',which_graphs='EDUCATION', dpi_ = 600)
-plot_graph_properties_distribution_non_weighted(G_loaded, '_AS_SHOPPING_FULLPOP_',which_graphs='SHOPPING', dpi_ = 600)
-plot_graph_properties_distribution_non_weighted(G_loaded, '_AS_PT_FULLPOP_',which_graphs='PT', dpi_ = 600)
-plot_graph_properties_distribution_non_weighted(G_loaded, '_AS_UNION_FULLPOP_',which_graphs='UNION', dpi_ = 600)
+plot_graph_properties_distribution_non_weighted(G_loaded, '_AS_OTHER_FULLPOP_',which_graphs='OTHER', dpi_ = 300)
+plot_graph_properties_distribution_non_weighted(G_loaded, '_AS_WORK_FULLPOP_',which_graphs='WORK', dpi_ = 300)
+plot_graph_properties_distribution_non_weighted(G_loaded, '_AS_EDUCATION_FULLPOP_',which_graphs='EDUCATION', dpi_ = 300)
+plot_graph_properties_distribution_non_weighted(G_loaded, '_AS_SHOPPING_FULLPOP_',which_graphs='SHOPPING', dpi_ = 300)
+plot_graph_properties_distribution_non_weighted(G_loaded, '_AS_PT_FULLPOP_',which_graphs='PT', dpi_ = 300)
+plot_graph_properties_distribution_non_weighted(G_loaded, '_AS_UNION_FULLPOP_',which_graphs='UNION', dpi_ = 300)
 
 
 # In[180]:
@@ -3030,7 +3038,7 @@ locs, labels = plt.xticks()  # Get the current locations and labels.
 plt.xticks(np.arange(0, 1, step=0.2))  # Set label locations.
 plt.xticks(np.arange(288), timeofdayticks, rotation=90)  # Set text labels.
 plt.tight_layout()
-plt.savefig('output_images/weighted_degrees.png',dpi=600)
+plt.savefig('output_images/weighted_degrees.png',dpi=300)
 plt.show()
 
 
@@ -3086,7 +3094,7 @@ locs, labels = plt.xticks()  # Get the current locations and labels.
 plt.xticks(np.arange(0, 1, step=0.2))  # Set label locations.
 plt.xticks(np.arange(288), timeofdayticks, rotation=90)  # Set text labels.
 
-plt.savefig('output_images/weighted_degrees.png',dpi=600)
+plt.savefig('output_images/weighted_degrees.png',dpi=300)
 plt.show()
 
 
@@ -3145,9 +3153,9 @@ locs, labels = plt.xticks()  # Get the current locations and labels.
 plt.xticks(np.arange(0, 1, step=0.2))  # Set label locations.
 plt.xticks(np.arange(288), timeofdayticks, rotation=45)  # Set text labels.
 plt.yscale('log')
-plt.ylim(1e-5,1)
+#plt.ylim(1e-5,1)
 plt.tight_layout()
-plt.savefig('output_images/weighted_degrees_smoothed.png',dpi=600)
+plt.savefig('output_images/weighted_degrees_smoothed.png',dpi=300)
 plt.show()
 
 
@@ -3184,7 +3192,7 @@ locs, labels = plt.xticks()  # Get the current locations and labels.
 plt.xticks(np.arange(0, 1, step=0.2))  # Set label locations.
 plt.xticks(np.arange(288), timeofdayticks, rotation=90)  # Set text labels.
 plt.tight_layout()
-plt.savefig('output_images/weighted_degrees_linear.png',dpi=600)
+plt.savefig('output_images/weighted_degrees_linear.png',dpi=300)
 plt.show()
 
 
@@ -3227,7 +3235,7 @@ plt.yscale('linear')
 plt.ylabel('Average weighted degree', fontsize=20)
 # plt.grid()
 plt.tight_layout()
-plt.savefig('output_images/weighted_degrees_smoothed_linear.png',dpi=600)
+plt.savefig('output_images/weighted_degrees_smoothed_linear.png',dpi=300)
 plt.show()
 
 
@@ -3272,7 +3280,7 @@ plt.yscale('log')
 # plt.xlabel('Time of day(5 minute intervals)')
 plt.ylabel('Average degree', fontsize=20)
 plt.tight_layout()
-plt.savefig('output_images/non_weighted_degrees.png',dpi=600)
+plt.savefig('output_images/non_weighted_degrees.png',dpi=300)
 plt.show()
 
 
@@ -3315,7 +3323,7 @@ plt.xticks(np.arange(0, 1, step=0.2))  # Set label locations.
 plt.xticks(np.arange(288), timeofdayticks, rotation=90)  # Set text labels.
 plt.yscale('log')
 plt.tight_layout()
-plt.savefig('output_images/non_weighted_degrees_smoothed.png',dpi=600)
+plt.savefig('output_images/non_weighted_degrees_smoothed.png',dpi=300)
 plt.show()
 
 
@@ -3352,7 +3360,7 @@ locs, labels = plt.xticks()  # Get the current locations and labels.
 plt.xticks(np.arange(0, 1, step=0.2))  # Set label locations.
 plt.xticks(np.arange(288), timeofdayticks, rotation=90)  # Set text labels.
 plt.tight_layout()
-plt.savefig('output_images/non_weighted_degrees_linear.png',dpi=600)
+plt.savefig('output_images/non_weighted_degrees_linear.png',dpi=300)
 plt.show()
 
 
@@ -3395,7 +3403,7 @@ locs, labels = plt.xticks()  # Get the current locations and labels.
 plt.xticks(np.arange(0, 1, step=0.2))  # Set label locations.
 plt.xticks(np.arange(288), timeofdayticks, rotation=45)  # Set text labels.
 plt.tight_layout()
-plt.savefig('output_images/non_weighted_degrees_smoothed_linear_v3.png',dpi=600)
+plt.savefig('output_images/non_weighted_degrees_smoothed_linear_v3.png',dpi=300)
 plt.show()
 
 
@@ -3463,13 +3471,13 @@ plt.yscale('log')
 # plt.xscale('log')
 # plt.legend(fontsize=20)
 plt.tight_layout()
-plt.ylim(1,1e6)
-plt.xlim(1,2500)
+#plt.ylim(1,1e6)
+#plt.xlim(1,2500)
 # locs, labels = plt.xticks()  # Get the current locations and labels.
 # plt.xticks(np.arange(0, 1, step=0.2))  # Set label locations.
 # plt.xticks(np.arange(288), timeofdayticks, rotation=90)  # Set text labels.
 plt.tight_layout()
-plt.savefig('output_images/AI_histogram_3_hours_linear'+str(key)+'.png', dpi = 600)
+plt.savefig('output_images/AI_histogram_3_hours_linear'+str(key)+'.png', dpi = 300)
 plt.show()
 
 
@@ -3580,7 +3588,7 @@ locs, labels = plt.xticks()  # Get the current locations and labels.
 plt.xticks(np.arange(0, 1, step=0.2))  # Set label locations.
 plt.xticks(np.arange(288), timeofdayticks, rotation=90)  # Set text labels.
 plt.tight_layout()
-plt.savefig('output_images/max_size_clique.png',dpi=600)
+plt.savefig('output_images/max_size_clique.png',dpi=300)
 plt.show()
 ########################################. SMOOTHED ###########
 a = np.convolve(a, np.ones((5,))/5, mode='same')    
@@ -3683,7 +3691,7 @@ locs, labels = plt.xticks()  # Get the current locations and labels.
 plt.xticks(np.arange(0, 1, step=0.2))  # Set label locations.
 plt.xticks(np.arange(288), timeofdayticks, rotation=45)  # Set text labels.
 plt.tight_layout()
-plt.savefig('output_images/max_size_clique_smoothed_45.png',dpi=600)
+plt.savefig('output_images/max_size_clique_smoothed_45.png',dpi=300)
 plt.show()
 
 
@@ -3742,46 +3750,47 @@ plt.plot(bins_[:-1], (counts_), color='orange', label='AS')
 # In[ ]:
 
 
-
 node_lat_lon = {}
 node_dict = {}
 with open('AI_node_lat_lon.csv') as f:
-   for row in f:
-       listed = row.strip().split(',')
-       node_lat_lon[int(listed[0])] = [float(listed[1]), float(listed[2])]
+    for row in f:
+        listed = row.strip().split(',')
+        node_lat_lon[int(listed[0])] = [float(listed[1]), float(listed[2])]
 
 node_wise_dict_of_act = {}
 for i in range(len(das)):
-   if int(das[i][5]) in node_wise_dict_of_act:
-       node_wise_dict_of_act[int(das[i][5])].append(das[i][4])
-   else:
-       node_wise_dict_of_act[int(das[i][5])]= [das[i][4]]
+    if int(das[i][5]) in node_wise_dict_of_act:
+        node_wise_dict_of_act[int(das[i][5])].append(das[i][4])
+    else:
+        node_wise_dict_of_act[int(das[i][5]) ]= [das[i][4]]
 
-import collections    
+import collections
 for key in node_wise_dict_of_act:
-   counter=collections.Counter(node_wise_dict_of_act[key])
-   if 'Home' not in counter:
-       counter['Home'] = 0
-   if 'Shop' not in counter:
-       counter['Shop'] = 0 
-   if 'Education' not in counter:
-       counter['Education'] = 0
-   if 'Other' not in counter:
-       counter['Other'] = 0
-   if 'Work' not in counter:
-       counter['Work'] = 0        
-   node_wise_dict_of_act[key] = counter
-   
-       
-with open('node_wise_city_characeristics.csv','w') as f:       
-   csvwriter = csv.writer(f)
-   csvwriter.writerow(['lat','lon','Home','Work','Education','Shopping','Other'])
-   for key in node_wise_dict_of_act:
-       try:
-           csvwriter.writerow([node_lat_lon[key][1], node_lat_lon[key][0], node_wise_dict_of_act[key]['Home'], node_wise_dict_of_act[key]['Work'], node_wise_dict_of_act[key]['Education'], node_wise_dict_of_act[key]['Shop'], node_wise_dict_of_act[key]['Other']])
-       except:
-           print ("Missing node id ", key)
-           continue
+    counter =collections.Counter(node_wise_dict_of_act[key])
+    if 'Home' not in counter:
+        counter['Home'] = 0
+    if 'Shop' not in counter:
+        counter['Shop'] = 0
+    if 'Education' not in counter:
+        counter['Education'] = 0
+    if 'Other' not in counter:
+        counter['Other'] = 0
+    if 'Work' not in counter:
+        counter['Work'] = 0
+    node_wise_dict_of_act[key] = counter
+
+
+with open('node_wise_city_characeristics.csv' ,'w') as f:
+    csvwriter = csv.writer(f)
+    csvwriter.writerow(['lat' ,'lon' ,'Home' ,'Work' ,'Education' ,'Shopping' ,'Other'])
+    for key in node_wise_dict_of_act:
+        try:
+            csvwriter.writerow([node_lat_lon[key][1], node_lat_lon[key][0], node_wise_dict_of_act[key]['Home'], node_wise_dict_of_act[key]['Work'], node_wise_dict_of_act[key]['Education'], node_wise_dict_of_act[key]['Shop'], node_wise_dict_of_act[key]['Other']])
+        except:
+            print ("Missing node id ", key)
+            continue
 
 print ("Whole script finished running")
 print ("firstlinestarttime to lastlinestarttime: ", time.time() - firstlinestarttime)
+
+
