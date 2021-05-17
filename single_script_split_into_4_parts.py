@@ -47,7 +47,7 @@ HOW_MANY_HOUSEHOLDS = 10000 # set to -1 for running on full population
 HOPSIZE = 12  # For faster creation of Graphs: set to 1 for limited RAM, find the correct value using hit and trial according to available RAM
 RUN_MODES = sys.argv[1]  # ['REGENERATE_GRAPHS','CALIBRATING', 'SIMULATING', 'ANALYSING_OUTPUTS']
 
-running_statevectors_path = running_statevectors + sys.argv[2] # path for saving all the items from the run, (apart from Graph properties)
+running_statevectors_path = 'running_statevectors_' + sys.argv[2] # path for saving all the items from the run, (apart from Graph properties)
 
 CALIBRATED_THETA_PRIME = 0.22  # 0.22: calibrated
 
