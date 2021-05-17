@@ -1,63 +1,38 @@
-###########################################
-# python single_script.py REGENERATE_GRAPHS
-# python single_script.py CALIBRATING
-# python single_script.py SIMULATING
-# python single_script.py ANALYSING_OUTPUTS
-###########################################
-
 import time
 import csv
 import random
-import pickle
+
 import gc
-import csv
-import time
+
 import pickle
 import numpy as np
 import time
 import matplotlib.pyplot as plt
 import collections
 import matplotlib as mpl
-import pickle
-import numpy as np
-import matplotlib.pyplot as plt
+
+
+
 from datetime import datetime
 from datetime import timedelta
-import numpy as np
+
 import os
-import time
 import datetime as dt
-import csv
-from datetime import datetime
-from datetime import timedelta
-import os
-import time
-import datetime as dt
+
 import matplotlib
-import numpy as np
+
 import threading
-import multiprocessing
-import matplotlib.pyplot as plt
-import pickle
+
 from multiprocessing import Pool
-import os
-import csv
-import time
-import matplotlib.pyplot as plt
-import pickle
-import numpy as np
-import gc
-import numpy as np
+
+
+
+
+
+
 import multiprocessing
 import matplotlib as mpl
 import pickle
-import matplotlib.pyplot as plt
-import numpy as np
-import matplotlib as mpl
-import pickle
-import matplotlib.pyplot as plt
-import numpy as np
-import matplotlib as mpl
 import sys
 
 firstlinestarttime = time.time()
@@ -67,10 +42,18 @@ firstlinestarttime = time.time()
 ####################################
 load_graphs_in_RAM = True
 store_graphs_folder_name = 'FOR_IDO'
-HOW_MANY_HOUSEHOLDS = 10000  # set to -1 for running on full population
+
+HOW_MANY_HOUSEHOLDS = 10000 # set to -1 for running on full population
 HOPSIZE = 12  # For faster creation of Graphs: set to 1 for limited RAM, find the correct value using hit and trial according to available RAM
 RUN_MODES = sys.argv[1]  # ['REGENERATE_GRAPHS','CALIBRATING', 'SIMULATING', 'ANALYSING_OUTPUTS']
-CALIBRATED_THETA_PRIME = 0.6  # 0.22: calibrated
+
+running_statevectors_path = running_statevectors + sys.argv[2] # path for saving all the items from the run, (apart from Graph properties)
+
+CALIBRATED_THETA_PRIME = 0.22  # 0.22: calibrated
+
+
+
+
 
 ### The following numbers are set to arbitrarily large indices
 ### so that the ids of different types of items do not intersect 
@@ -242,12 +225,12 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
     else:
         print("Full population selected")
 
-    os.system(' mkdir running_statevectors')
-    with open('running_statevectors/hhid.pickle', 'wb') as handle:
+#     os.system(' mkdir running_statevectors')
+    with open(store_graphs_folder_name + '/hhid.pickle', 'wb') as handle:
         pickle.dump(hhid, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    with open('running_statevectors/age.pickle', 'wb') as handle:
+    with open(store_graphs_folder_name + '/age.pickle', 'wb') as handle:
         pickle.dump(age, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    with open('running_statevectors/pidDict.pickle', 'wb') as handle:
+    with open(store_graphs_folder_name + '/pidDict.pickle', 'wb') as handle:
         pickle.dump(pidDict, handle, protocol=pickle.HIGHEST_PROTOCOL)
     print("dictionary of person ids to age/home-location saved to allow for repeatable runs later")
 
@@ -744,11 +727,11 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
     print("UNION of graph completed")
     
 else:
-    with open('running_statevectors/hhid.pickle', 'rb') as handle:
+    with open(store_graphs_folder_name + '/hhid.pickle', 'rb') as handle:
         hhid = pickle.load(handle)
-    with open('running_statevectors/age.pickle', 'rb') as handle:
+    with open(store_graphs_folder_name + '/age.pickle', 'rb') as handle:
         age = pickle.load(handle)
-    with open('running_statevectors/pidDict.pickle', 'rb') as handle:
+    with open(store_graphs_folder_name + '/pidDict.pickle', 'rb') as handle:
         pidDict = pickle.load(handle)
     print("Graphs not regenerated; hence pidDict loaded to retain PiDs in Graph")
     
@@ -1017,7 +1000,7 @@ est_r_0 = []
 
 if RUN_MODES == 'SIMULATING':
     master_start_time = time.time()
-    os.system(' mkdir running_statevectors')
+    os.system(' mkdir '+ running_statevectors_path)
 
     # 1: S
     # 2: E
@@ -1234,10 +1217,10 @@ if RUN_MODES == 'SIMULATING':
                             stateVector[i, 0] = 3
                             pids_to_be_removed_from_population.add(i)
 
-            with open('running_statevectors/stateVector_at_day' + str(day_num) + '.pickle', 'wb') as handle:
+            with open(running_statevectors_path +'/stateVector_at_day' + str(day_num) + '.pickle', 'wb') as handle:
                 pickle.dump(stateVector, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-            with open('running_statevectors/infections_per_node_day' + str(day_num) + '.pickle', 'wb') as handle:
+            with open(running_statevectors_path+'/infections_per_node_day' + str(day_num) + '.pickle', 'wb') as handle:
                 pickle.dump(infections_per_node, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
             print("Count of missing age: ", count_missing_age)
@@ -1255,13 +1238,12 @@ if RUN_MODES == 'SIMULATING':
     # gc.collect()
 
     print("Keys in G_loaded[]", G_loaded.keys())
-    path_for_backup_file = 'running_statevectors'
 
-    with open(path_for_backup_file + '/overall_state_theta.pickle', 'wb') as handle:
+    with open(running_statevectors_path + '/overall_state_theta.pickle', 'wb') as handle:
         pickle.dump(backup_states, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    with open(path_for_backup_file + '/infections_per_node.pickle', 'wb') as handle:
+    with open(running_statevectors_path + '/infections_per_node.pickle', 'wb') as handle:
         pickle.dump(infections_per_node, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    with open(path_for_backup_file + '/deaths_per_node.pickle', 'wb') as handle:
+    with open(running_statevectors_path + '/deaths_per_node.pickle', 'wb') as handle:
         pickle.dump(deaths_per_node, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 # In[ ]:
@@ -1269,21 +1251,19 @@ if RUN_MODES == 'SIMULATING':
 if RUN_MODES == 'ANALYSING_OUTPUTS':
 
     backup_states_loaded = {}
-    path_for_backup_file = 'running_statevectors'
-    os.system('mkdir running_statevectors')
     for i in range(275):
-        with open(path_for_backup_file + '/stateVector_at_day' + str(i) + '.pickle', 'rb') as handle:
+        with open(running_statevectors_path + '/stateVector_at_day' + str(i) + '.pickle', 'rb') as handle:
             backup_states_loaded[i] = pickle.load(handle)
 
         # In[ ]:
 
     # In[ ]:
 
-    with open(path_for_backup_file + '/overall_state_theta.pickle', 'rb') as handle:
+    with open(running_statevectors_path + '/overall_state_theta.pickle', 'rb') as handle:
         backup_states_loaded = pickle.load(handle)
-    with open(path_for_backup_file + '/infections_per_node.pickle', 'rb') as handle:
+    with open(running_statevectors_path + '/infections_per_node.pickle', 'rb') as handle:
         infections_per_node = pickle.load(handle)
-    with open(path_for_backup_file + '/deaths_per_node.pickle', 'rb') as handle:
+    with open(running_statevectors_path + '/deaths_per_node.pickle', 'rb') as handle:
         deaths_per_node = pickle.load(handle)
 
     # In[ ]:
@@ -2052,7 +2032,7 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
         pid_to_lat_lon[pid] = [(pid_lat), (pid_lon)]
     print("Count of missing pids ", countMissing)
 
-    with open('pid_wise_state.csv', 'w') as f:
+    with open(running_statevectors_path+ '/pid_wise_state.csv', 'w') as f:
         csvwriter = csv.writer(f)
 
         csvwriter.writerow(['SEIR', 'datetime', 'lat', 'lon'])
@@ -2145,7 +2125,7 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
 
     print("Count of missing pids ", countMissing)
 
-    with open('node_wise_state.csv', 'w') as f:
+    with open(running_statevectors_path+ '/node_wise_state.csv', 'w') as f:
         csvwriter = csv.writer(f)
 
         csvwriter.writerow(['SEIR', 'datetime', 'lat', 'lon'])
@@ -2192,7 +2172,6 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
 
     # In[ ]:
 
-    os.system(' tar -czvf images.tar.gz *.png')
 
 
     # 
@@ -3498,6 +3477,10 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
             except:
                 print("Missing node id ", key)
                 continue
+     
+    
+    
+    os.system('mv output_images output_images_'+sys.argv[2])
 
 print("Whole script finished running")
 print("firstlinestarttime to lastlinestarttime: ", time.time() - firstlinestarttime)
