@@ -2127,7 +2127,20 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
 
     with open(running_statevectors_path+ '/node_wise_state.csv', 'w') as f:
         csvwriter = csv.writer(f)
-
+        
+        """
+        SEIR: whether the person is in state S, E, I or R based on his infection status on day datetime
+        lat and lon are his home location latitude and longitude with some noise added (gaussian) assuming the 
+        home node at the centre.
+        The encoding of SEIR is same as in the actual simulation of the epidemic, reproduced below for convenience:
+        
+        # 1: S
+        # 2: E
+        # 3: I_s
+        # 4: I_a
+        # 5: R
+        # 6: D
+        """
         csvwriter.writerow(['SEIR', 'datetime', 'lat', 'lon'])
         for j in range(0, 270, 7):
             spatial_seir = {}
