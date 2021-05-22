@@ -43,7 +43,7 @@ firstlinestarttime = time.time()
 load_graphs_in_RAM = True
 store_graphs_folder_name = 'FOR_IDO'
 
-HOW_MANY_HOUSEHOLDS = 10000 # set to -1 for running on full population
+HOW_MANY_HOUSEHOLDS = -1 # set to -1 for running on full population
 HOPSIZE = 12  # For faster creation of Graphs: set to 1 for limited RAM, find the correct value using hit and trial according to available RAM
 RUN_MODES = sys.argv[1]  # ['REGENERATE_GRAPHS','CALIBRATING', 'SIMULATING', 'ANALYSING_OUTPUTS']
 
@@ -1351,8 +1351,9 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     plt.xlabel("Day", fontsize=20)
     plt.ylabel("Number of individuals ", fontsize=20)
     # plt.legend(loc = 'best')
+
+    plt.ylim(0,140000)
     plt.tight_layout()
-    # plt.ylim(0,140000)
     # plt.grid()
 
     plt.savefig("output_images/overall_state_theta_SEIR_S_R_removed.png", dpi=300)
@@ -1372,9 +1373,9 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     plt.yscale('linear')
     plt.xlabel("Day", fontsize=20)
     plt.ylabel("Number of individuals ", fontsize=20)
-    # plt.legend(loc = 'best')
+    plt.ylim(0,140000)
+    plt.legend(loc = 'best')
     plt.tight_layout()
-    # plt.ylim(0,140000)
     plt.savefig("output_images/overall_state_theta_SEIR_S_R_removed_zoomed_towards_outbreak.png", dpi=300)
 
     plt.show()
@@ -2127,20 +2128,7 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
 
     with open(running_statevectors_path+ '/node_wise_state.csv', 'w') as f:
         csvwriter = csv.writer(f)
-        
-        """
-        SEIR: whether the person is in state S, E, I or R based on his infection status on day datetime
-        lat and lon are his home location latitude and longitude with some noise added (gaussian) assuming the 
-        home node at the centre.
-        The encoding of SEIR is same as in the actual simulation of the epidemic, reproduced below for convenience:
-        
-        # 1: S
-        # 2: E
-        # 3: I_s
-        # 4: I_a
-        # 5: R
-        # 6: D
-        """
+
         csvwriter.writerow(['SEIR', 'datetime', 'lat', 'lon'])
         for j in range(0, 270, 7):
             spatial_seir = {}
@@ -2906,7 +2894,7 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     plt.xticks(np.arange(0, 1, step=0.2))  # Set label locations.
     plt.xticks(np.arange(288), timeofdayticks, rotation=45)  # Set text labels.
     plt.yscale('log')
-    # plt.ylim(1e-5,1)
+    plt.ylim(1e-5,1)
     plt.tight_layout()
     plt.savefig('output_images/weighted_degrees_smoothed.png', dpi=300)
     plt.show()
@@ -3213,8 +3201,8 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     # plt.xscale('log')
     # plt.legend(fontsize=20)
     plt.tight_layout()
-    # plt.ylim(1,1e6)
-    # plt.xlim(1,2500)
+    plt.ylim(1,1e6)
+    plt.xlim(1,2500)
     # locs, labels = plt.xticks()  # Get the current locations and labels.
     # plt.xticks(np.arange(0, 1, step=0.2))  # Set label locations.
     # plt.xticks(np.arange(288), timeofdayticks, rotation=90)  # Set text labels.
