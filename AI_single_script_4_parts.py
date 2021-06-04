@@ -45,11 +45,11 @@ store_graphs_folder_name = 'FOR_IDO'
 
 HOW_MANY_HOUSEHOLDS = -1 # set to -1 for running on full population
 HOPSIZE = 12  # For faster creation of Graphs: set to 1 for limited RAM, find the correct value using hit and trial according to available RAM
-RUN_MODES = sys.argv[1]  # ['REGENERATE_GRAPHS','CALIBRATING', 'SIMULATING', 'ANALYSING_OUTPUTS']
+RUN_MODES = sys.argv[1]  # ['REGENERATE_GRAPHS','CALIBRATING', 'SIMULATING','GENERATE_OVERALL_SEIRD_PLOTS_ONLY', 'GENERATE_ALL_PLOTS']
 
 running_statevectors_path = 'running_statevectors_' + sys.argv[2] # path for saving all the items from the run, (apart from Graph properties)
 
-CALIBRATED_THETA_PRIME = 0.22  # 0.22: calibrated
+CALIBRATED_THETA_PRIME = 0.179 # 0.179 calibrated for R_0=2.6 mean      # 0.22: calibrated previously; slight more than 3; R_0, as mentioned in the paper
 
 
 
@@ -785,7 +785,7 @@ if RUN_MODES == 'CALIBRATING':
 
     age_map = {0: 0, 1: 0, 2: 1, 3: 1, 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5, 12: 6, 13: 6, 14: 7, 15: 7,
                16: 7, 17: 7}
-    for initial_infections in [1000] * 3:
+    for initial_infections in [1000] * 10:
 
         st_dict = {}  # keeping track of total stats
 
@@ -1248,7 +1248,7 @@ if RUN_MODES == 'SIMULATING':
 
 # In[ ]:
 
-if RUN_MODES == 'ANALYSING_OUTPUTS':
+if RUN_MODES == 'GENERATE_OVERALL_SEIRD_PLOTS_ONLY' or RUN_MODES == 'GENERATE_ALL_PLOTS' :
 
     backup_states_loaded = {}
     for i in range(275):
@@ -1312,6 +1312,17 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     plt.ylabel("Number of individuals", fontsize=20)
     # plt.legend(loc = 'best')
     plt.tight_layout()
+    
+    rand_filenum = str(int(np.random.rand()*100000))
+    with open('output_images/overall_SEIRD_rand_'+ rand_filenum + '.csv', 'w') as f2:
+        csvwriter = csv.writer(f2)
+        csvwriter.writerow(['S'] + S)
+        csvwriter.writerow(['E'] + E)
+        csvwriter.writerow(['I'] + I)
+        csvwriter.writerow(['R'] + R) 
+        csvwriter.writerow(['D'] + D)
+        csvwriter.writerow(['I_a'] + I_a)
+        csvwriter.writerow(['I_s'] + I_s)        
 
     # plt.grid()
 
@@ -1470,10 +1481,19 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     Death_rate_sm /= (4500000 * 100000)
     Inf_rate_sm /= (4500000 * 100000)
 
+    with open('output_images/R_t_raw_and_Dr_Ir_per_100K_rand_'+ rand_filenum + '.csv', 'w') as f2:
+        csvwriter = csv.writer(f2)
+        csvwriter.writerow(['R_t'] + r_t)
+        csvwriter.writerow(['Inf_rate'] + Inf_rate)
+        csvwriter.writerow(['Death_rate'] + Death_rate)
+        
+        
+    
     ax1.plot(range((270)), r_t_sm[:270], 'orange', label='R(t)')
     ax2.plot(range((270)), Inf_rate_sm[:270], 'red', label='Infection rate per 100K individuals')
     ax2.plot(range((270)), Death_rate_sm[:270], '#525252', label='Death rate per 100K individuals')
 
+    
     ax2.set_yscale('log')
 
     ax1.set_xlabel('Day', fontsize=20)
@@ -1654,6 +1674,22 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     plt.xlabel('Day', fontsize=20)
     plt.savefig('output_images/activity_wise_infections_logscale.png', dpi=300)
     plt.show()
+    
+    with open('output_images/Modewise_rand_'+ rand_filenum + '.csv', 'w') as f2:
+        csvwriter = csv.writer(f2)
+        csvwriter.writerow(['infections_at_Home'] + infections_at_Home)
+        csvwriter.writerow(['infections_at_PT'] + infections_at_PT)
+        csvwriter.writerow(['infections_at_BUS'] + infections_at_BUS)
+        csvwriter.writerow(['infections_at_MRT'] + infections_at_MRT)
+        csvwriter.writerow(['infections_at_work'] + infections_at_work)
+        csvwriter.writerow(['infections_at_school'] + infections_at_school)
+        csvwriter.writerow(['infections_at_shopping'] + infections_at_shopping)
+        csvwriter.writerow(['infections_at_other'] + infections_at_other)
+
+
+        
+    
+    
 
     plt.plot(range(len(infections_at_Home)), infections_at_Home, label='Home', c=colormap['H'])
     plt.plot(range(len(infections_at_PT)), infections_at_PT, label='Transit', c=colormap['Bus+MRT'])
@@ -1971,6 +2007,10 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     """
     # In[ ]:
 
+    
+    
+if RUN_MODES == 'GENERATE_ALL_PLOTS' :
+    
     hhid_to_node_lat_lon = {}
     c = 0
     missingCount = 0
@@ -3481,7 +3521,7 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
      
     
     
-    os.system('mv output_images output_images_'+sys.argv[2])
+os.system('mv output_images output_images_'+sys.argv[2])
 
 print("Whole script finished running")
 print("firstlinestarttime to lastlinestarttime: ", time.time() - firstlinestarttime)
