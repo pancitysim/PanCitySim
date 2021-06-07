@@ -220,7 +220,7 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
             listed = row.strip().split(',')
             pid = listed[0] + "-1"
             age[pidDict[pid]] = int(listed[9])   
-            hhid[pidDict[pid]] = hhidDict[int(listed[3])]
+            hhid[pidDict[pid]] = hhidDict[int(listed[1])]
 
     if HOW_MANY_HOUSEHOLDS != -1:
         print("Smaller travel time table created by choosing ", HOW_MANY_HOUSEHOLDS, " households at random")
