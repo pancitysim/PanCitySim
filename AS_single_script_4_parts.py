@@ -219,7 +219,7 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
         for row in f:
             listed = row.strip().split(',')
             pid = listed[0] + "-1"
-            age[pidDict[pid]] = int(listed[0])   
+            age[pidDict[pid]] = int(listed[9])   
             hhid[pidDict[pid]] = hhidDict[int(listed[3])]
 
     if HOW_MANY_HOUSEHOLDS != -1:
