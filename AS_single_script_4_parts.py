@@ -11,8 +11,6 @@ import matplotlib.pyplot as plt
 import collections
 import matplotlib as mpl
 
-
-
 from datetime import datetime
 from datetime import timedelta
 
@@ -25,11 +23,6 @@ import threading
 
 from multiprocessing import Pool
 
-
-
-
-
-
 import multiprocessing
 import matplotlib as mpl
 import pickle
@@ -38,25 +31,22 @@ import sys
 firstlinestarttime = time.time()
 
 ####################################
-### SET THE VARIABLES and PATHS 
+### SET THE VARIABLES and PATHS
 ####################################
 load_graphs_in_RAM = True
 store_graphs_folder_name = 'SR_REVIEW_AS_FULL_POP'
 
-HOW_MANY_HOUSEHOLDS = 10000 # set to -1 for running on full population
+HOW_MANY_HOUSEHOLDS = 10000  # set to -1 for running on full population
 HOPSIZE = 12  # For faster creation of Graphs: set to 1 for limited RAM, find the correct value using hit and trial according to available RAM
 RUN_MODES = sys.argv[1]  # ['REGENERATE_GRAPHS','CALIBRATING', 'SIMULATING', 'ANALYSING_OUTPUTS']
 
-running_statevectors_path = 'running_statevectors_' + sys.argv[2] # path for saving all the items from the run, (apart from Graph properties)
+running_statevectors_path = 'running_statevectors_' + sys.argv[
+    2]  # path for saving all the items from the run, (apart from Graph properties)
 
-CALIBRATED_THETA_PRIME = 1,7  # 0.22: calibrated
-
-
-
-
+CALIBRATED_THETA_PRIME = 1.7  # 0.22: calibrated
 
 ### The following numbers are set to arbitrarily large indices
-### so that the ids of different types of items do not intersect 
+### so that the ids of different types of items do not intersect
 ### Such a formulation allows retrieving the type of item directly by seeing the range of values
 index_start = {}
 index_start['PID'] = 0
@@ -114,9 +104,7 @@ print("Dictionary of node wise areas created by using voronoi tesselations")
 
 gc.collect()
 
-print ("RUN MODE: ", RUN_MODES)
-
-
+print("RUN MODE: ", RUN_MODES)
 
 if RUN_MODES == 'REGENERATE_GRAPHS':
 
@@ -142,7 +130,7 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
         next(f)
         for row in f:
             listed = row.strip().split(',')
-            hhidlist.append(int(listed[1]))   # This index is 3 in case of AI
+            hhidlist.append(int(listed[1]))  # This index is 3 in case of AI
             pid = listed[0] + "-1"
             hhid[pid] = int(listed[1])  # This index is 3 in case of AI
     hhidlist = list(set(hhidlist))
@@ -184,7 +172,7 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
                 pid = listed[0]
                 if hhid[pid] in hhidlist:
                     csvwriter.writerow(listed)
-    os.system(' mv tt AS_demand_BC')
+    os.system(' mv tt AS_BC_das.csv')
 
     with open('traveltime.csv') as f:
         with open('tt', 'w') as f2:
@@ -200,10 +188,10 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
 
     hhid_unique_ids = []
     with open('AS_individual.csv') as f:
-        next(f) # because the AS individual file has a header
+        next(f)  # because the AS individual file has a header
         for row in f:
             listed = row.strip().split(',')
-            hhid_unique_ids.append(int(listed[3]))
+            hhid_unique_ids.append(int(listed[1]))  # This index is 3 in case of AI
 
     hhid_unique_ids = list(set(hhid_unique_ids))
     hhidDict = {}
@@ -215,11 +203,11 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
     age = {}
     hhid = {}
     with open('AS_individual.csv') as f:
-        next(f) # because the AS individual file has a header
+        next(f)  # because the AS individual file has a header
         for row in f:
             listed = row.strip().split(',')
             pid = listed[0] + "-1"
-            age[pidDict[pid]] = int(listed[9])   
+            age[pidDict[pid]] = int(listed[9])
             hhid[pidDict[pid]] = hhidDict[int(listed[1])]
 
     if HOW_MANY_HOUSEHOLDS != -1:
@@ -227,7 +215,7 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
     else:
         print("Full population selected")
 
-#     os.system(' mkdir running_statevectors')
+    #     os.system(' mkdir running_statevectors')
     with open(store_graphs_folder_name + '/hhid.pickle', 'wb') as handle:
         pickle.dump(hhid, handle, protocol=pickle.HIGHEST_PROTOCOL)
     with open(store_graphs_folder_name + '/age.pickle', 'wb') as handle:
@@ -236,20 +224,17 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
         pickle.dump(pidDict, handle, protocol=pickle.HIGHEST_PROTOCOL)
     print("dictionary of person ids to age/home-location saved to allow for repeatable runs later")
 
-
-
     # hhid_pid_list = {}
     # for pid in hhid:
     #     if hhid[pid] not in hhid_pid_list:
     #         hhid_pid_list[hhid[pid]] = [pid]
     #     else:
     #         hhid_pid_list[hhid[pid]].append(pid)
-    
-    
+
     backup_states = {}
     backup_states_loaded = {}
     gc.collect()
-    
+
     #### NOT needed, as we are not studying income distribution based disease propagatio
     #### If we want to retain, this dictionary must be saved
     # income = {}
@@ -259,8 +244,7 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
     #         pid = listed[0]+"-1"
     #         income[pidDict[pid]] = int(listed[14])
     # income_map = {1:'Less than 15,000',2:'15,000 - 24,999',3:'25,000 - 34,999',4:'35,000 - 49,999',5:'50,000 - 74,999',6:'75,000 - 99,999',7:'100,000 - 149,999',8:'150,000'}
-    
-    
+
     #####################################################
     ############### HOME LOCATION GRAPH #################
     #####################################################
@@ -448,9 +432,9 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
     6  waiting_time     time without time zone     Waiting/dwell time of vehicle at that stop
     """
 
-    # creating a map with 
-    # key: (<bus_line>, <stop id>, <time_slot>) 
-    # value: (<bus_line>, <trip_id_of_bus>) 
+    # creating a map with
+    # key: (<bus_line>, <stop id>, <time_slot>)
+    # value: (<bus_line>, <trip_id_of_bus>)
     M_JT = {}  # Map from journeytime.csv file
     a = []
     with open('journeytime.csv') as f:
@@ -542,15 +526,15 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
         for row in f:
             listed = row.strip().split(',')
 
-            if listed[7] not in [ 'ON_MRT', 'ON_BUS','WAIT_MRT', 'WAIT_BUS']:
+            if listed[7] not in ['ON_MRT', 'ON_BUS', 'WAIT_MRT', 'WAIT_BUS']:
                 continue
 
             pid = listed[0]
             arr_t = (listed[8])
-            hh,mm,ss = arr_t.split(':')
+            hh, mm, ss = arr_t.split(':')
             ss = int(hh) * 3600 + int(mm) * 60 + int(ss)
 
-            strt_t = ss - int(listed[9])   
+            strt_t = ss - int(listed[9])
 
             arr_five_min_int = ss // 300
             start_five_min_int = strt_t // 300
@@ -561,16 +545,16 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
             problematicRow = False
             if st_key not in M_JT:
                 tt = st_key[2]
-                counter = 0 
-                while((st_key[0], st_key[1], tt)) not in M_JT:
+                counter = 0
+                while ((st_key[0], st_key[1], tt)) not in M_JT:
                     tt -= 1
                     counter += 1
                     if counter > 1:
                         problematicRow = True
                         break
-                if max_slide < st_key[2] - tt :
-                    max_slide = st_key[2] - tt                   
-                st_key = (st_key[0], st_key[1], tt) 
+                if max_slide < st_key[2] - tt:
+                    max_slide = st_key[2] - tt
+                st_key = (st_key[0], st_key[1], tt)
             if problematicRow:
                 continue
             else:
@@ -580,16 +564,13 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
                 continue
             pt_line_trip_id = M_JT[st_key]
 
-
             if pt_line_trip_id not in S_keys:
-                if listed[7] in [ 'ON_MRT', 'WAIT_MRT']: # , 'WAIT_BUS']:'ON_BUS'
-                    S_keys[pt_line_trip_id] = index_mrt 
+                if listed[7] in ['ON_MRT', 'WAIT_MRT']:  # , 'WAIT_BUS']:'ON_BUS'
+                    S_keys[pt_line_trip_id] = index_mrt
                     index_mrt += 1
-                if listed[7] in [ 'ON_BUS', 'WAIT_BUS']: # , 'WAIT_BUS']:'ON_BUS'
-                    S_keys[pt_line_trip_id] = index_bus 
+                if listed[7] in ['ON_BUS', 'WAIT_BUS']:  # , 'WAIT_BUS']:'ON_BUS'
+                    S_keys[pt_line_trip_id] = index_bus
                     index_bus += 1
-
-
 
                 unique_bus_mrt_lines.append(listed[10])
 
@@ -732,7 +713,7 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
     pool.map(process_one_t, range(0, 288))
 
     print("UNION of graph completed")
-    
+
 else:
     with open(store_graphs_folder_name + '/hhid.pickle', 'rb') as handle:
         hhid = pickle.load(handle)
@@ -741,8 +722,7 @@ else:
     with open(store_graphs_folder_name + '/pidDict.pickle', 'rb') as handle:
         pidDict = pickle.load(handle)
     print("Graphs not regenerated; hence pidDict loaded to retain PiDs in Graph")
-    
-    
+
 G_loaded = {}
 
 if load_graphs_in_RAM:
@@ -844,7 +824,7 @@ if RUN_MODES == 'CALIBRATING':
 
         for day_num in range(5):  # days
 
-            for t in range(0, 288):  # 1 day   
+            for t in range(0, 288):  # 1 day
 
                 d = time.time()
                 if load_graphs_in_RAM == False:
@@ -873,9 +853,9 @@ if RUN_MODES == 'CALIBRATING':
                     if dummy not in numberOfInfectiousNeigboursTracker:
                         continue
 
-                    if dummy < 20000000 or dummy >= 50000000:  ### NODE ACTIVITY 
+                    if dummy < 20000000 or dummy >= 50000000:  ### NODE ACTIVITY
                         assert (not (dummy >= 50000000 and dummy < 60000000))  # should never happen
-                        if dummy >= 60000000 and dummy < 70000000:  # WORK 
+                        if dummy >= 60000000 and dummy < 70000000:  # WORK
                             area_of_this_dummy = node_wise_A[dummy - index_start['WORK_NODE']]
                         elif dummy >= 70000000 and dummy < 80000000:  # EDUCATION :
                             area_of_this_dummy = node_wise_A[dummy - index_start['EDUCATION_NODE']]
@@ -896,13 +876,13 @@ if RUN_MODES == 'CALIBRATING':
                         mean_dist = np.mean(d ** 0.5)
                         ilist.append(mean_dist)
 
-                    elif dummy >= 30000000 and dummy < 50000000:  ## PT 
+                    elif dummy >= 30000000 and dummy < 50000000:  ## PT
                         if dummy < 40000000:  # BUS
-                            L = 2.759 * (4 ** 0.333)  # (A_bus * 1/4) ** 0.5 
+                            L = 2.759 * (4 ** 0.333)  # (A_bus * 1/4) ** 0.5
                         else:  # MRT
-                            L = 3.314 * (25 ** 0.333)  # (A_mrt_coach * 1/5) ** 0.5  
+                            L = 3.314 * (25 ** 0.333)  # (A_mrt_coach * 1/5) ** 0.5
                         mean_dist = L * 0.5014
-                    elif dummy < 30000000 and dummy >= 20000000:  ##HOME 
+                    elif dummy < 30000000 and dummy >= 20000000:  ##HOME
                         mean_dist = 6.5
 
                     summation_i_tau = 1 / ((mean_dist) ** 3) * numberOfInfectiousNeigboursTracker[dummy]
@@ -954,7 +934,7 @@ if RUN_MODES == 'CALIBRATING':
 
                             ### actual updates of states
             for i in range(stateVector.shape[0]):
-                # I_s -> D 
+                # I_s -> D
                 if stateVector[i, 0] == 3:
                     age_ = age_map[age[i]]
                     d_D = np.random.lognormal(d_D_mu_sigma[age_]['mu'], d_D_mu_sigma[age_]['sigma'],
@@ -969,13 +949,13 @@ if RUN_MODES == 'CALIBRATING':
                             deaths_per_node[day_num][hhid_] += 1
 
             # E -> I_a
-            #         for i in range(stateVector.shape[0]): 
+            #         for i in range(stateVector.shape[0]):
             #             if rho_binary[i] != 1:   # good news
             #                 if stateVector[i,0] == 2 :
             #                     d_L = np.random.lognormal(1.62, 0.42 ** 0.5, 1)   # mu = 1.62; sigma_square = 0.42
             #                     K_n_d = 1 - np.exp(-1/d_L)
             #                     if np.random.rand() < K_n_d:
-            #                         stateVector[i,0] = 4                    
+            #                         stateVector[i,0] = 4
 
             for i in range(stateVector.shape[0]):
                 # E -> I_s
@@ -988,12 +968,12 @@ if RUN_MODES == 'CALIBRATING':
                             pids_to_be_removed_from_population.add(i)
 
         #         print ("Count of missing age: ", count_missing_age)
-        #         print ("Count ``of missing PT area: ", count_missing_pt_areas)        
+        #         print ("Count ``of missing PT area: ", count_missing_pt_areas)
         print("S: ", st_dict['S', day_num + 1], "E: ", st_dict['E', day_num + 1], "I_s: ", st_dict['I_s', day_num + 1],
               "I_a: ", st_dict['I_a', day_num + 1], "R: ", st_dict['R', day_num + 1], "D: ", st_dict['D', day_num + 1])
         print("R_0 at ", day_num + 1, " days ", st_dict['E', day_num + 1] / 1000)
 
-    # 
+    #
     # ### Estimating $\theta ' $ using the equation below
     # $$R_0 = \frac{1}{X}\sum_m^X\sum_n^S ( 1 - e^{-\Theta'\sum_m \tau_{nm}})$$
 
@@ -1007,7 +987,7 @@ est_r_0 = []
 
 if RUN_MODES == 'SIMULATING':
     master_start_time = time.time()
-    os.system(' mkdir '+ running_statevectors_path)
+    os.system(' mkdir ' + running_statevectors_path)
 
     # 1: S
     # 2: E
@@ -1062,7 +1042,7 @@ if RUN_MODES == 'SIMULATING':
 
         startTime = time.time()
         nodes_for_plotting = []
-        calibrated_theta_prime = CALIBRATED_THETA_PRIME  # after random fix # 0.25 # 0.07 
+        calibrated_theta_prime = CALIBRATED_THETA_PRIME  # after random fix # 0.25 # 0.07
 
         backup_states = []
         pids_to_be_removed_from_population = set([])
@@ -1078,7 +1058,7 @@ if RUN_MODES == 'SIMULATING':
 
         for day_num in range(275):  # days
 
-            for t in range(0, 288):  # 1 day   
+            for t in range(0, 288):  # 1 day
 
                 d = time.time()
                 if load_graphs_in_RAM == False:
@@ -1107,9 +1087,9 @@ if RUN_MODES == 'SIMULATING':
                     if dummy not in numberOfInfectiousNeigboursTracker:
                         continue
 
-                    if dummy < 20000000 or dummy >= 50000000:  ### NODE ACTIVITY 
+                    if dummy < 20000000 or dummy >= 50000000:  ### NODE ACTIVITY
                         assert (not (dummy >= 50000000 and dummy < 60000000))  # should never happen
-                        if dummy >= 60000000 and dummy < 70000000:  # WORK 
+                        if dummy >= 60000000 and dummy < 70000000:  # WORK
                             area_of_this_dummy = node_wise_A[dummy - index_start['WORK_NODE']]
                         elif dummy >= 70000000 and dummy < 80000000:  # EDUCATION :
                             area_of_this_dummy = node_wise_A[dummy - index_start['EDUCATION_NODE']]
@@ -1130,13 +1110,13 @@ if RUN_MODES == 'SIMULATING':
                         mean_dist = np.mean(d ** 0.5)
                         ilist.append(mean_dist)
 
-                    elif dummy >= 30000000 and dummy < 50000000:  ## PT 
+                    elif dummy >= 30000000 and dummy < 50000000:  ## PT
                         if dummy < 40000000:  # BUS
-                            L = 2.759 * (4 ** 0.333)  # (A_bus * 1/4) ** 0.5 
+                            L = 2.759 * (4 ** 0.333)  # (A_bus * 1/4) ** 0.5
                         else:  # MRT
-                            L = 3.314 * (25 ** 0.333)  # (A_mrt_coach * 1/5) ** 0.5  
+                            L = 3.314 * (25 ** 0.333)  # (A_mrt_coach * 1/5) ** 0.5
                         mean_dist = L * 0.5014
-                    elif dummy < 30000000 and dummy >= 20000000:  ##HOME 
+                    elif dummy < 30000000 and dummy >= 20000000:  ##HOME
                         mean_dist = 6.5
 
                     summation_i_tau = 1 / ((mean_dist) ** 3) * numberOfInfectiousNeigboursTracker[dummy]
@@ -1189,7 +1169,7 @@ if RUN_MODES == 'SIMULATING':
 
                             ### actual updates of states
             for i in range(stateVector.shape[0]):
-                # I_s -> D 
+                # I_s -> D
                 if stateVector[i, 0] == 3:
                     age_ = age_map[age[i]]
                     d_D = np.random.lognormal(d_D_mu_sigma[age_]['mu'], d_D_mu_sigma[age_]['sigma'],
@@ -1224,10 +1204,11 @@ if RUN_MODES == 'SIMULATING':
                             stateVector[i, 0] = 3
                             pids_to_be_removed_from_population.add(i)
 
-            with open(running_statevectors_path +'/stateVector_at_day' + str(day_num) + '.pickle', 'wb') as handle:
+            with open(running_statevectors_path + '/stateVector_at_day' + str(day_num) + '.pickle', 'wb') as handle:
                 pickle.dump(stateVector, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-            with open(running_statevectors_path+'/infections_per_node_day' + str(day_num) + '.pickle', 'wb') as handle:
+            with open(running_statevectors_path + '/infections_per_node_day' + str(day_num) + '.pickle',
+                      'wb') as handle:
                 pickle.dump(infections_per_node, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
             print("Count of missing age: ", count_missing_age)
@@ -1255,7 +1236,7 @@ if RUN_MODES == 'SIMULATING':
 
 # In[ ]:
 
-if RUN_MODES == 'ANALYSING_OUTPUTS':
+if RUN_MODES == 'GENERATE_OVERALL_SEIRD_PLOTS_ONLY' or RUN_MODES == 'GENERATE_ALL_PLOTS':
 
     backup_states_loaded = {}
     for i in range(275):
@@ -1320,7 +1301,18 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     # plt.legend(loc = 'best')
     plt.tight_layout()
 
-    # plt.grid()
+    rand_filenum = str(int(np.random.rand() * 100000))
+    with open('output_images/overall_SEIRD_rand_' + rand_filenum + '.csv', 'w') as f2:
+        csvwriter = csv.writer(f2)
+        csvwriter.writerow(['S'] + S)
+        csvwriter.writerow(['E'] + E)
+        csvwriter.writerow(['I'] + I)
+        csvwriter.writerow(['R'] + R)
+        csvwriter.writerow(['D'] + D)
+        csvwriter.writerow(['I_a'] + I_a)
+        csvwriter.writerow(['I_s'] + I_s)
+
+        # plt.grid()
 
     plt.savefig("output_images/overall_state_theta_SEIR.png", dpi=300)
     plt.show()
@@ -1359,7 +1351,7 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     plt.ylabel("Number of individuals ", fontsize=20)
     # plt.legend(loc = 'best')
 
-    plt.ylim(0,140000)
+    plt.ylim(0, 140000)
     plt.tight_layout()
     # plt.grid()
 
@@ -1380,8 +1372,8 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     plt.yscale('linear')
     plt.xlabel("Day", fontsize=20)
     plt.ylabel("Number of individuals ", fontsize=20)
-    plt.ylim(0,140000)
-    plt.legend(loc = 'best')
+    plt.ylim(0, 140000)
+    plt.legend(loc='best')
     plt.tight_layout()
     plt.savefig("output_images/overall_state_theta_SEIR_S_R_removed_zoomed_towards_outbreak.png", dpi=300)
 
@@ -1477,6 +1469,12 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     Death_rate_sm /= (4500000 * 100000)
     Inf_rate_sm /= (4500000 * 100000)
 
+    with open('output_images/R_t_raw_and_Dr_Ir_per_100K_rand_' + rand_filenum + '.csv', 'w') as f2:
+        csvwriter = csv.writer(f2)
+        csvwriter.writerow(['R_t'] + r_t)
+        csvwriter.writerow(['Inf_rate'] + Inf_rate)
+        csvwriter.writerow(['Death_rate'] + Death_rate)
+
     ax1.plot(range((270)), r_t_sm[:270], 'orange', label='R(t)')
     ax2.plot(range((270)), Inf_rate_sm[:270], 'red', label='Infection rate per 100K individuals')
     ax2.plot(range((270)), Death_rate_sm[:270], '#525252', label='Death rate per 100K individuals')
@@ -1494,7 +1492,7 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
 
     # ax2.set_ylabel('Y2 data', color='b')
 
-    ############################# smoothed 
+    ############################# smoothed
     fig, ax1 = plt.subplots()
 
     ax2 = ax1.twinx()
@@ -1609,15 +1607,15 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     # In[ ]:
 
     ### daily transmission by activity
-    #  dummy < 20000000 or dummy >= 50000000:    ### NODE ACTIVITY 
-    #  dummy >= 60000000 and dummy < 70000000:  # WORK 
+    #  dummy < 20000000 or dummy >= 50000000:    ### NODE ACTIVITY
+    #  dummy >= 60000000 and dummy < 70000000:  # WORK
     #  dummy >= 70000000 and dummy < 80000000:  # EDUCATION :
     #  dummy >= 80000000 and dummy < 90000000:  # SHOPPING :
     #  dummy >= 90000000 and dummy < 100000000:  # OTHER :
-    #  dummy >= 30000000 and dummy < 50000000:    ## PT 
+    #  dummy >= 30000000 and dummy < 50000000:    ## PT
     #         dummy < 40000000:  # BUS
     #                     else: # MRT
-    #  dummy < 30000000 and dummy >= 20000000:  ##HOME 
+    #  dummy < 30000000 and dummy >= 20000000:  ##HOME
     n = 276
     infections_at_work = [0] * n
     infections_at_school = [0] * n
@@ -1643,7 +1641,7 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
                     infections_at_BUS[i] += (infections_per_node[i][dummy])
                 else:
                     infections_at_MRT[i] += (infections_per_node[i][dummy])
-            if dummy < 30000000 and dummy >= 20000000:  ##HOME 
+            if dummy < 30000000 and dummy >= 20000000:  ##HOME
                 infections_at_Home[i] += (infections_per_node[i][dummy])
     colormap = {'H': '#1b9e77', 'W': '#d95f02', 'E': '#7570b3', 'S': '#e7298a', 'O': '#66a61e', 'B': '#e6ab02',
                 'M': '#a6761d', 'Bus+MRT': '#666666'}
@@ -1661,6 +1659,17 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     plt.xlabel('Day', fontsize=20)
     plt.savefig('output_images/activity_wise_infections_logscale.png', dpi=300)
     plt.show()
+
+    with open('output_images/Modewise_rand_' + rand_filenum + '.csv', 'w') as f2:
+        csvwriter = csv.writer(f2)
+        csvwriter.writerow(['infections_at_Home'] + infections_at_Home)
+        csvwriter.writerow(['infections_at_PT'] + infections_at_PT)
+        csvwriter.writerow(['infections_at_BUS'] + infections_at_BUS)
+        csvwriter.writerow(['infections_at_MRT'] + infections_at_MRT)
+        csvwriter.writerow(['infections_at_work'] + infections_at_work)
+        csvwriter.writerow(['infections_at_school'] + infections_at_school)
+        csvwriter.writerow(['infections_at_shopping'] + infections_at_shopping)
+        csvwriter.writerow(['infections_at_other'] + infections_at_other)
 
     plt.plot(range(len(infections_at_Home)), infections_at_Home, label='Home', c=colormap['H'])
     plt.plot(range(len(infections_at_PT)), infections_at_PT, label='Transit', c=colormap['Bus+MRT'])
@@ -1978,6 +1987,8 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     """
     # In[ ]:
 
+if RUN_MODES == 'GENERATE_ALL_PLOTS':
+
     hhid_to_node_lat_lon = {}
     c = 0
     missingCount = 0
@@ -2040,7 +2051,7 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
         pid_to_lat_lon[pid] = [(pid_lat), (pid_lon)]
     print("Count of missing pids ", countMissing)
 
-    with open(running_statevectors_path+ '/pid_wise_state.csv', 'w') as f:
+    with open(running_statevectors_path + '/pid_wise_state.csv', 'w') as f:
         csvwriter = csv.writer(f)
 
         csvwriter.writerow(['SEIR', 'datetime', 'lat', 'lon'])
@@ -2075,7 +2086,7 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
                 #                     if hhid_to_node_lat_lon[hhid[i]][2] in spatial_seir:
                 #                         spatial_seir[hhid_to_node_lat_lon[hhid[i]][2]][4-1] += 1
                 #                     else:
-                #                         spatial_seir[hhid_to_node_lat_lon[hhid[i]][2]] = [0,0,0,1]                    
+                #                         spatial_seir[hhid_to_node_lat_lon[hhid[i]][2]] = [0,0,0,1]
                 except:
                     missingCount += 1
                     continue
@@ -2129,11 +2140,11 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
         else:
             pid_lat = base_lat - np.random.normal() * 0.001
         pid_to_lat_lon2[pid] = [(base_lat), (base_lon)]
-        # pid_to_lat_lon[pid] = [(pid_lat), (pid_lon)]    
+        # pid_to_lat_lon[pid] = [(pid_lat), (pid_lon)]
 
     print("Count of missing pids ", countMissing)
 
-    with open(running_statevectors_path+ '/node_wise_state.csv', 'w') as f:
+    with open(running_statevectors_path + '/node_wise_state.csv', 'w') as f:
         csvwriter = csv.writer(f)
 
         csvwriter.writerow(['SEIR', 'datetime', 'lat', 'lon'])
@@ -2168,22 +2179,22 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
                 #                     if hhid_to_node_lat_lon[hhid[i]][2] in spatial_seir:
                 #                         spatial_seir[hhid_to_node_lat_lon[hhid[i]][2]][4-1] += 1
                 #                     else:
-                #                         spatial_seir[hhid_to_node_lat_lon[hhid[i]][2]] = [0,0,0,1]                    
+                #                         spatial_seir[hhid_to_node_lat_lon[hhid[i]][2]] = [0,0,0,1]
                 except:
                     missingCount += 1
                     continue
 
             print(missingCount, ' @ day_num = ', j)
+
+
     #         for node in spatial_seir:
     #             a = (spatial_seir[node])
     #             csvwriter.writerow([node]+ [a.index(max(a)), max(a)] + [listOfDates[j]+' 00:00'] +node_lat_lon[node])
 
     # In[ ]:
 
-
-
-    # 
-    # 
+    #
+    #
 
     # In[ ]:
 
@@ -2250,9 +2261,9 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
                     if not (dummy >= 30000000 and dummy < 50000000):
                         continue
 
-                if dummy < 20000000 or dummy >= 50000000:  ### NODE ACTIVITY 
+                if dummy < 20000000 or dummy >= 50000000:  ### NODE ACTIVITY
                     assert (not (dummy >= 50000000 and dummy < 60000000))  # should never happen
-                    if dummy >= 60000000 and dummy < 70000000:  # WORK 
+                    if dummy >= 60000000 and dummy < 70000000:  # WORK
                         area_of_this_dummy = node_wise_A[dummy - index_start['WORK_NODE']]
                     elif dummy >= 70000000 and dummy < 80000000:  # EDUCATION :
                         area_of_this_dummy = node_wise_A[dummy - index_start['EDUCATION_NODE']]
@@ -2264,13 +2275,13 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
                     r = (area_of_this_dummy / 3.14) ** 0.5
                     mean_dist = 128 * r / (45 * 3.14)
 
-                elif dummy >= 30000000 and dummy < 50000000:  ## PT 
+                elif dummy >= 30000000 and dummy < 50000000:  ## PT
                     if dummy < 40000000:  # BUS
-                        L = 2.759  # (A_bus * 1/4) ** 0.5 
+                        L = 2.759  # (A_bus * 1/4) ** 0.5
                     else:  # MRT
-                        L = 3.314  # (A_mrt_coach * 1/5) ** 0.5  
+                        L = 3.314  # (A_mrt_coach * 1/5) ** 0.5
                     mean_dist = L * 0.5014
-                elif dummy < 30000000 and dummy >= 20000000:  ##HOME 
+                elif dummy < 30000000 and dummy >= 20000000:  ##HOME
                     mean_dist = 6.5
 
                 neighbour_count += ((n - 1) * (1 / mean_dist))  ## assuming same distances(expected)
@@ -2317,12 +2328,12 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
                     if not (dummy >= 30000000 and dummy < 50000000):
                         continue
 
-                if dummy < 20000000 or dummy >= 50000000:  ### NODE ACTIVITY 
+                if dummy < 20000000 or dummy >= 50000000:  ### NODE ACTIVITY
                     if 'NODE' not in percentage_of_node_types:
                         percentage_of_node_types['NODE'] = n
                     else:
                         percentage_of_node_types['NODE'] += n
-                    if dummy >= 60000000 and dummy < 70000000:  # WORK 
+                    if dummy >= 60000000 and dummy < 70000000:  # WORK
                         area_of_this_dummy = node_wise_A[dummy - index_start['WORK_NODE']]
                     elif dummy >= 70000000 and dummy < 80000000:  # EDUCATION :
                         area_of_this_dummy = node_wise_A[dummy - index_start['EDUCATION_NODE']]
@@ -2337,23 +2348,23 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
                     #                 all_neighbors = np.random.multivariate_normal([0,0], ([sigma_x,0],[0,sigma_y]), n)
                     #                 p_n = np.array([0,0])
                     #                 d = np.sum((p_n - all_neighbors)**2, axis = 1)
-                    #                 mean_dist = np.mean(d**0.5)  
+                    #                 mean_dist = np.mean(d**0.5)
 
                     r = (area_of_this_dummy / 3.14) ** 0.5
                     mean_dist = 128 * r / (45 * 3.14)
 
-                elif dummy >= 30000000 and dummy < 50000000:  ## PT 
+                elif dummy >= 30000000 and dummy < 50000000:  ## PT
                     if 'PT' not in percentage_of_node_types:
                         percentage_of_node_types['PT'] = n
                     else:
                         percentage_of_node_types['PT'] += n
 
                     if dummy < 40000000:  # BUS
-                        L = 2.759  # (A_bus * 1/4) ** 0.5 
+                        L = 2.759  # (A_bus * 1/4) ** 0.5
                     else:  # MRT
-                        L = 3.314  # (A_mrt_coach * 1/5) ** 0.5  
+                        L = 3.314  # (A_mrt_coach * 1/5) ** 0.5
                     mean_dist = L * 0.5014
-                elif dummy < 30000000 and dummy >= 20000000:  ##HOME 
+                elif dummy < 30000000 and dummy >= 20000000:  ##HOME
                     mean_dist = 6.5
                     if 'HOME' not in percentage_of_node_types:
                         percentage_of_node_types['HOME'] = n
@@ -2490,9 +2501,9 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
                 if 'OTHER' == which_graphs:
                     if not (dummy >= 90000000 and dummy < 100000000):
                         continue
-                if dummy < 20000000 or dummy >= 50000000:  ### NODE ACTIVITY 
+                if dummy < 20000000 or dummy >= 50000000:  ### NODE ACTIVITY
                     assert (not (dummy >= 50000000 and dummy < 60000000))  # should never happen
-                    if dummy >= 60000000 and dummy < 70000000:  # WORK 
+                    if dummy >= 60000000 and dummy < 70000000:  # WORK
                         area_of_this_dummy = node_wise_A[dummy - index_start['WORK_NODE']]
                     elif dummy >= 70000000 and dummy < 80000000:  # EDUCATION :
                         area_of_this_dummy = node_wise_A[dummy - index_start['EDUCATION_NODE']]
@@ -2508,7 +2519,7 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
                     #                 p_n = np.random.multivariate_normal([0,0], ([sigma_x,0],[0,sigma_y]), 1)
                     #                 d = np.sum((p_n - infectious_ppl)**2, axis = 1)
                     #                 try:
-                    #                     mean_dist = np.mean(d**0.5)  
+                    #                     mean_dist = np.mean(d**0.5)
                     #                 except:
                     #                     error_count += 1
                     #                     mean_dist = 1
@@ -2516,13 +2527,13 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
                     r = (area_of_this_dummy / 3.14) ** 0.5
                     mean_dist = 128 * r / (45 * 3.14)
 
-                elif dummy >= 30000000 and dummy < 50000000:  ## PT 
+                elif dummy >= 30000000 and dummy < 50000000:  ## PT
                     if dummy < 40000000:  # BUS
-                        L = 2.759 * 4  # (A_bus * 1/4) ** 0.5 
+                        L = 2.759 * 4  # (A_bus * 1/4) ** 0.5
                     else:  # MRT
-                        L = 3.314 * 25  # (A_mrt_coach * 1/5) ** 0.5  
+                        L = 3.314 * 25  # (A_mrt_coach * 1/5) ** 0.5
                     mean_dist = L * 0.5014
-                elif dummy < 30000000 and dummy >= 20000000:  ##HOME 
+                elif dummy < 30000000 and dummy >= 20000000:  ##HOME
                     mean_dist = 6.5
 
                 neighbour_count += ((n - 1) * (1 / mean_dist))  ## assuming same distances(expected)
@@ -2557,7 +2568,7 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
                     G = pickle.load(handle)
             else:
                 G = G_loaded[i]
-                
+
             for dummy in G["backward"]:
                 n = len(G["backward"][dummy])
 
@@ -2576,9 +2587,9 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
                 if 'OTHER' == which_graphs:
                     if not (dummy >= 90000000 and dummy < 100000000):
                         continue
-                if dummy < 20000000 or dummy >= 50000000:  ### NODE ACTIVITY 
+                if dummy < 20000000 or dummy >= 50000000:  ### NODE ACTIVITY
                     assert (not (dummy >= 50000000 and dummy < 60000000))  # should never happen
-                    if dummy >= 60000000 and dummy < 70000000:  # WORK 
+                    if dummy >= 60000000 and dummy < 70000000:  # WORK
                         area_of_this_dummy = node_wise_A[dummy - index_start['WORK_NODE']]
                     elif dummy >= 70000000 and dummy < 80000000:  # EDUCATION :
                         area_of_this_dummy = node_wise_A[dummy - index_start['EDUCATION_NODE']]
@@ -2590,13 +2601,13 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
                     r = (area_of_this_dummy / 3.14) ** 0.5
                     mean_dist = 128 * r / (45 * 3.14)
 
-                elif dummy >= 30000000 and dummy < 50000000:  ## PT 
+                elif dummy >= 30000000 and dummy < 50000000:  ## PT
                     if dummy < 40000000:  # BUS
-                        L = 2.759 * 4  # (A_bus * 1/4) ** 0.5 
+                        L = 2.759 * 4  # (A_bus * 1/4) ** 0.5
                     else:  # MRT
-                        L = 3.314 * 25  # (A_mrt_coach * 1/5) ** 0.5  
+                        L = 3.314 * 25  # (A_mrt_coach * 1/5) ** 0.5
                     mean_dist = L * 0.5014
-                elif dummy < 30000000 and dummy >= 20000000:  ##HOME 
+                elif dummy < 30000000 and dummy >= 20000000:  ##HOME
                     mean_dist = 6.5
 
                 neighbour_count += ((n - 1) * (1 / mean_dist))  ## assuming same distances(expected)
@@ -2901,7 +2912,7 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     plt.xticks(np.arange(0, 1, step=0.2))  # Set label locations.
     plt.xticks(np.arange(288), timeofdayticks, rotation=45)  # Set text labels.
     plt.yscale('log')
-    plt.ylim(1e-5,1)
+    plt.ylim(1e-5, 1)
     plt.tight_layout()
     plt.savefig('output_images/weighted_degrees_smoothed.png', dpi=300)
     plt.show()
@@ -3165,8 +3176,8 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     mpl.rc('font', **font)
 
     colormap = {}
-#     for i in range(8):
-#         colormap[i] = colors[i]
+    #     for i in range(8):
+    #         colormap[i] = colors[i]
 
     colormap = {0: '#762a83', 1: '#9970ab', 2: '#c2a5cf', 3: '#e7d4e8', 4: '#d9f0d3', 5: '#a6dba0', 6: '#5aae61',
                 7: '#1b7837'}
@@ -3208,8 +3219,8 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     # plt.xscale('log')
     # plt.legend(fontsize=20)
     plt.tight_layout()
-    plt.ylim(1,1e6)
-    plt.xlim(1,2500)
+    plt.ylim(1, 1e6)
+    plt.xlim(1, 2500)
     # locs, labels = plt.xticks()  # Get the current locations and labels.
     # plt.xticks(np.arange(0, 1, step=0.2))  # Set label locations.
     # plt.xticks(np.arange(288), timeofdayticks, rotation=90)  # Set text labels.
@@ -3407,7 +3418,7 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
     # get mode shares from DAS
     modes_share = {}
     das = []
-    with open('AS_demand_BC') as f:
+    with open('AS_BC_das.csv') as f:
         next(f)
         for row in f:
             listed = row.strip().split(',')
@@ -3485,10 +3496,8 @@ if RUN_MODES == 'ANALYSING_OUTPUTS':
             except:
                 print("Missing node id ", key)
                 continue
-     
-    
-    
-    os.system('mv output_images output_images_'+sys.argv[2])
+
+os.system('mv output_images output_images_' + sys.argv[2])
 
 print("Whole script finished running")
 print("firstlinestarttime to lastlinestarttime: ", time.time() - firstlinestarttime)
