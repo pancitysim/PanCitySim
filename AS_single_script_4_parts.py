@@ -36,14 +36,13 @@ firstlinestarttime = time.time()
 load_graphs_in_RAM = True
 store_graphs_folder_name = 'SR_REVIEW_AS_FULL_POP'
 
-HOW_MANY_HOUSEHOLDS = 10000  # set to -1 for running on full population
+HOW_MANY_HOUSEHOLDS = 10000 # set to -1 for running on full population
 HOPSIZE = 12  # For faster creation of Graphs: set to 1 for limited RAM, find the correct value using hit and trial according to available RAM
 RUN_MODES = sys.argv[1]  # ['REGENERATE_GRAPHS','CALIBRATING', 'SIMULATING', 'ANALYSING_OUTPUTS']
 
-running_statevectors_path = 'running_statevectors_' + sys.argv[
-    2]  # path for saving all the items from the run, (apart from Graph properties)
+running_statevectors_path = 'running_statevectors_' + sys.argv[2]  # path for saving all the items from the run, (apart from Graph properties)
 
-CALIBRATED_THETA_PRIME = 1.7  # 0.22: calibrated
+CALIBRATED_THETA_PRIME = 0.22  # 0.22: calibrated
 
 ### The following numbers are set to arbitrarily large indices
 ### so that the ids of different types of items do not intersect
@@ -235,15 +234,6 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
     backup_states_loaded = {}
     gc.collect()
 
-    #### NOT needed, as we are not studying income distribution based disease propagatio
-    #### If we want to retain, this dictionary must be saved
-    # income = {}
-    # with open('AI_individual.csv') as f:
-    #     for row in f:
-    #         listed = row.strip().split(',')
-    #         pid = listed[0]+"-1"
-    #         income[pidDict[pid]] = int(listed[14])
-    # income_map = {1:'Less than 15,000',2:'15,000 - 24,999',3:'25,000 - 34,999',4:'35,000 - 49,999',5:'50,000 - 74,999',6:'75,000 - 99,999',7:'100,000 - 149,999',8:'150,000'}
 
     #####################################################
     ############### HOME LOCATION GRAPH #################
@@ -590,7 +580,7 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
     for sttt in range(0, 12):
         forwardDict = {}
         backwardDict = {}
-        with open('tt_expanded.csv') as f:
+        with open('traveltime.csv') as f:
             for row in f:
                 listed = row.strip().split(',')
 
@@ -772,7 +762,7 @@ if RUN_MODES == 'CALIBRATING':
 
     age_map = {0: 0, 1: 0, 2: 1, 3: 1, 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5, 12: 6, 13: 6, 14: 7, 15: 7,
                16: 7, 17: 7}
-    for initial_infections in [1000] * 3:
+    for initial_infections in [1000] * 10:
 
         st_dict = {}  # keeping track of total stats
 
@@ -864,8 +854,8 @@ if RUN_MODES == 'CALIBRATING':
                         elif dummy >= 90000000 and dummy < 100000000:  # OTHER :
                             area_of_this_dummy = node_wise_A[dummy - index_start['OTHER_NODE']]
 
-                        if area_of_this_dummy > 39800000:
-                            area_of_this_dummy = 39800000
+                        if area_of_this_dummy > 13000000:
+                            area_of_this_dummy = 13000000
                         sigma = area_of_this_dummy * 0.0572  # 0.05 * 0.00040941176 # 0.048 * 0.005
                         sigma_x = sigma
                         sigma_y = sigma
@@ -1098,8 +1088,8 @@ if RUN_MODES == 'SIMULATING':
                         elif dummy >= 90000000 and dummy < 100000000:  # OTHER :
                             area_of_this_dummy = node_wise_A[dummy - index_start['OTHER_NODE']]
 
-                        if area_of_this_dummy > 39800000:
-                            area_of_this_dummy = 39800000
+                        if area_of_this_dummy > 13000000:
+                            area_of_this_dummy = 13000000
                         sigma = area_of_this_dummy * 0.0572  # 0.00040941176 # 0.048 * 0.005
                         sigma_x = sigma
                         sigma_y = sigma
