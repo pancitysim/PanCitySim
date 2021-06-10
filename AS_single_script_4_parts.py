@@ -42,7 +42,7 @@ RUN_MODES = sys.argv[1]  # ['REGENERATE_GRAPHS','CALIBRATING', 'SIMULATING', 'AN
 
 running_statevectors_path = 'running_statevectors_' + sys.argv[2]  # path for saving all the items from the run, (apart from Graph properties)
 
-CALIBRATED_THETA_PRIME = 0.22  # 0.22: calibrated
+CALIBRATED_THETA_PRIME = 0.27  # 0.22: calibrated
 
 ### The following numbers are set to arbitrarily large indices
 ### so that the ids of different types of items do not intersect
