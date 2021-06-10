@@ -36,7 +36,7 @@ firstlinestarttime = time.time()
 load_graphs_in_RAM = True
 store_graphs_folder_name = 'SR_REVIEW_AS_FULL_POP'
 
-HOW_MANY_HOUSEHOLDS = 10000 # set to -1 for running on full population
+HOW_MANY_HOUSEHOLDS = -1  # set to -1 for running on full population
 HOPSIZE = 12  # For faster creation of Graphs: set to 1 for limited RAM, find the correct value using hit and trial according to available RAM
 RUN_MODES = sys.argv[1]  # ['REGENERATE_GRAPHS','CALIBRATING', 'SIMULATING', 'ANALYSING_OUTPUTS']
 
@@ -207,7 +207,7 @@ if RUN_MODES == 'REGENERATE_GRAPHS':
             listed = row.strip().split(',')
             pid = listed[0] + "-1"
             age[pidDict[pid]] = int(listed[9])
-            hhid[pidDict[pid]] = hhidDict[int(listed[1])]
+            hhid[pidDict[pid]] = hhidDict[int(listed[1])] #This index is 3 for AI
 
     if HOW_MANY_HOUSEHOLDS != -1:
         print("Smaller travel time table created by choosing ", HOW_MANY_HOUSEHOLDS, " households at random")
@@ -3491,7 +3491,5 @@ os.system('mv output_images output_images_' + sys.argv[2])
 
 print("Whole script finished running")
 print("firstlinestarttime to lastlinestarttime: ", time.time() - firstlinestarttime)
-
-
 
 
