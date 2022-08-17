@@ -40,7 +40,7 @@ The complete set of ouput files from simmobility for `Auto Sprawl` are hosted [h
 Processing of huge graphs is a memory-hungry operation. If the amount of RAM available is not sufficient, the Graphs can be loaded from the disk during the course of simulation. This can be tweaked by setting the `load_graphs_in_RAM` to `False`. The parallel loading of Graphs was tested but is not incorporated in the current version of the notebook. These are present in the `parallel-loading-of-Graphs` branch. A flowchart showing the parallelisation of loading of contact graphs is shown [here](https://user-images.githubusercontent.com/9101260/83565330-cfc54480-a550-11ea-87ac-7c00cdf17622.png)
 
 ## Citation
-If you find this repository useful for your research, please cite the following paper:
+If you find this repository useful for your research, please consider citing the following paper and supplementary methodological notes:
 ```
 @article{kumar2021activity,
   title={Activity-based epidemic propagation and contact network scaling in auto-dependent metropolitan areas},
@@ -52,5 +52,12 @@ If you find this repository useful for your research, please cite the following 
   year={2021},
   publisher={Nature Publishing Group}
 }
+@article{kumar2020supplementary,
+  title={Supplementary Information: Activity-based contact network scaling and epidemic propagation in metropolitan areas},
+  author={Kumar, Nishant and Oke, Jimi B and Nahmias-Biran, Bat-hen},
+  year={2020}
+}
+
 ```
+
 
