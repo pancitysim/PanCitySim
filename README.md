@@ -42,11 +42,15 @@ Processing of huge graphs is a memory-hungry operation. If the amount of RAM ava
 ## Citation
 If you find this repository useful for your research, please cite the following paper:
 ```
-@article{kumar2020activity,
-  title={Activity-based contact network scaling and epidemic propagation in metropolitan areas},
-  author={Kumar, Nishant and Oke, Jimi B and Nahmias-Biran, Bat-hen},
-  journal={arXiv preprint arXiv:2006.06039},
-  year={2020}
+@article{kumar2021activity,
+  title={Activity-based epidemic propagation and contact network scaling in auto-dependent metropolitan areas},
+  author={Kumar, Nishant and Oke, Jimi and Nahmias-Biran, Bat-hen},
+  journal={Scientific reports},
+  volume={11},
+  number={1},
+  pages={1--14},
+  year={2021},
+  publisher={Nature Publishing Group}
 }
 ```
 
